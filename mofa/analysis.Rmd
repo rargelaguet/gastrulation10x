@@ -1,0 +1,296 @@
+---
+title: ""
+output: 
+  BiocStyle::html_document: 
+    fig_width: 10
+    fig_height: 8
+---
+
+
+```{r}
+# devtools::load_all("/Users/ricard/biofam/BioFAMtools")
+library(data.table)
+library(purrr)
+library(ggplot2)
+library(scater)
+library(reticulate)
+library(RColorBrewer)
+library(corrplot)
+library(BioFAMtools)
+```
+
+<!-- Define I/O and options -->
+```{r}
+source("/Users/ricard/gastrulation10x/mofa/load_settings.R")
+```
+
+<!-- Load sample metadata -->
+```{r}
+sample_metadata <- fread(io$sample.metadata, showProgress=F)# %>%
+  # .[,c("experiment","group"):=list(as.factor(experiment),as.factor(group))]
+```
+
+<!-- Load model -->
+```{r}
+# Full model
+file <- paste0(io$basedir,"/mofa/hdf5/no_sparsity/E6.5toE7.5_k25.hdf5")
+model <- load_model(file, load_training_data=TRUE, sort_factors=TRUE, set_names=TRUE)
+```
+
+```{r}
+# model <- detect_passengers(model)
+```
+
+<!-- Filter sample metadata -->
+```{r}
+sample_metadata_filt <- sample_metadata %>% 
+  setkey(cell) %>% .[unname(unlist(samples_names(model)))]
+```
+
+<!-- Rename views -->
+```{r}
+# views_names(model) <- "RNA"
+```
+
+<!-- Rename groups -->
+```{r}
+# opts$groups_names <- c(
+#   "atac.only" = "scATAC-seq only",
+#   "coassay" = "sci-CAR (coassay)",
+#   "rna.only" = "scRNA-seq only"
+# )
+# groups_names(model) <- stringr::str_replace_all(groups_names(model), opts$groups_names)
+```
+
+<!-- Subset factors -->
+```{r}
+r2 <- model@cache$variance_explained$r2_per_factor
+# factors <- sapply(r2, function(x) x[,"RNA"]>0.001)
+factors <- sapply(r2, function(x) x[,"RNA"]>0.0000)
+model <- subset_factors(model, which(apply(factors,1,sum) >= 1))
+factors_names(model) <- paste("Factor",1:get_dimensions(model)[["K"]], sep="")
+```
+
+
+<!-- Plot variance explained -->
+```{r}
+# plot_variance_explained(model, x="group", y="view", split_by="factor")
+```
+
+<!-- Plot factors -->
+
+```{r}
+p <- plot_factor(
+  model,
+  # factors = "all",
+  factors = c(25),
+  # color_by = "group"
+  color_by = as.character(sample_metadata_filt$celltype),
+  add_dots=F, add_violin=T, dodge=T
+  # color_by = "LAMA3"
+)
+
+print(p)
+# pdf(paste0(io$outdir,"/GOenrich_nonCGIprom_nondiff.pdf"), width=10, height=4, useDingbats = F)
+# print(p)
+# dev.off()
+```
+
+
+```{r}
+p <- plot_factors(
+  model, 
+  factors = c(1,2,3), 
+  color_by = sample_metadata_filt$celltype,
+  shape_by = sample_metadata_filt$sample,
+  dot_size = 0.5
+)
+
+# pdf(paste0(io$outdir,"/GOenrich_nonCGIprom_nondiff.pdf"), width=10, height=4, useDingbats = F)
+print(p)
+# dev.off()
+```
+
+
+
+<!-- Plot weights -->
+```{r}
+view <- "RNA"
+# view <- "ATAC_FALSE"
+
+p <- plot_weights(
+  model, 
+  view=view, 
+  factor=1, 
+  nfeatures=10, 
+  scale=F, abs=F
+)
+print(p)
+```
+
+<!-- Plot heatmaps -->
+```{r}
+model_i <- impute(model)
+```
+
+```{r}
+anno_df <- sample_metadata_filt[,c("sample","group")] %>% 
+  as.data.frame() %>% tibble::column_to_rownames("sample")
+```
+
+RNA
+```{r}
+pdf(paste0(io$pdfdir,"/Factor3_heatmap_rna_coassay.pdf"), useDingbats = F, onefile = F, width=6, height=3)
+
+plot_data_heatmap(
+  model3,
+  view="RNA expression", 
+  # groups = c("scRNA-seq only"),
+  groups = c("sci-CAR (coassay)"),
+  factor=3, 
+  features=15,
+  annotation_col=anno_df, annotation_colors=list("group"=opts$colors),
+  color=colorRampPalette(brewer.pal(n = 9, name="YlGn"))(100),
+  legend = T, annotation_legend=F, annotation_names_col=F,
+  treeheight_row = 0, treeheight_col = 0,
+  cluster_rows = T, cluster_cols=F,
+  show_rownames = T, show_colnames=F
+)
+
+dev.off()
+```
+
+ATAC distal
+```{r}
+# pdf(paste0(io$pdfdir,"/Factor3_heatmap_atacdistal_coassay.pdf"), useDingbats = F, onefile = F, width=6, height=3)
+
+plot_data_heatmap(
+  model3,
+  view="Distal ATAC peaks", 
+  groups = c("scATAC-seq only"),
+  # groups = c("sci-CAR (coassay)"),
+  factor=3, 
+  features=30,
+  annotation_col=anno_df, annotation_colors=list("group"=opts$colors),
+  color=colorRampPalette(brewer.pal(n = 9, name="Blues"))(100),
+  legend = T, annotation_legend=F, annotation_names_col=F,
+  treeheight_row = 0, treeheight_col = 0,
+  cluster_rows = T, cluster_cols=F,
+  show_rownames = F, show_colnames=F
+)
+
+# dev.off()
+```
+
+```{r}
+plot_factor_cor(model)
+```
+
+
+<!-- Gene set enrichment analysis -->
+
+Load MsigDb gene set
+```{r go_enrichment, echo=FALSE}
+# I/O MSigDB
+io$msigFile <- "/Users/ricard/data/MSigDB/v6.0/homo_sapiens/C5/bp_binary_matrix.rds"
+# io$msigFile <- "/Users/ricard/data/MSigDB/v6.0/homo_sapiens/C2/binary_matrix.rds"
+
+# Load MSigDB files
+feature.sets <- readRDS(io$msigFile)
+```
+
+<!-- Rename features -->
+```{r}
+genes <- fread("/Users/ricard/data/ensembl/human/v87/BioMart/mRNA/Hsapiens_genes_BioMart.87.txt") %>%
+  # .[symbol%in%features_names(model)[["RNA"]]] %>%
+  .[ens_id%in%colnames(feature.sets)]
+foo <- genes[,symbol]; names(foo) <- genes$ens_id
+
+# new_names <- stringr::str_replace_all(colnames(feature.sets), foo)
+new_names <- foo[colnames(feature.sets)]
+new_names <- new_names[which(!is.na(new_names))]
+
+feature.sets <- feature.sets[,names(new_names)]
+colnames(feature.sets) <- new_names
+```
+
+```{r}
+```
+
+```{r}
+# BioFAMtools::features_names(model)[["RNA"]] <- toupper(BioFAMtools::features_names(model)[["RNA"]])
+fsea.out <- FSEA(
+  model,
+  view = "RNA",
+  feature.sets = feature.sets,
+  statistical.test = "cor.adj.parametric",
+  alpha = 0.01
+)
+```
+
+```{r}
+View(fsea.out$pval.adj)
+```
+
+```{r}
+lineplot_FSEA(fsea.out, factor = 5, max.pathways = 8)
+```
+
+```{r}
+# view <- "RNA"
+# groups <- c("rna.only","coassay")
+
+view <- "ATAC_FALSE"
+groups <- c("atac.only","coassay")
+factor = 2
+nfeatures <- 10
+
+Z <- get_factors(model, factors=factor, as.data.frame = T) %>% as.data.table %>%
+  setnames("value","factor.value")
+
+W1 <- get_weights(model, views=view, factors=factor, as.data.frame = T) %>% as.data.table %>%
+  # .[,value:=abs(value)] %>%
+  setorder(value) %>%
+  tail(n=nfeatures)
+
+W2 <- get_weights(model, views=view, factors=factor, as.data.frame = T) %>% as.data.table %>%
+  # .[,value:=abs(value)] %>%
+  setorder(value) %>%
+  head(n=nfeatures)
+```
+
+```{r}
+features <- list(c(W1$feature,W2$feature))
+                 
+Y <- get_training_data(model, views=view, features=features, groups=groups, as.data.frame = T) %>%
+  as.data.table %>% merge(Z, by=c("sample","group")) %>%
+  .[,class:=ifelse(feature%in%W1$feature,"Up","Down")]
+
+p <- ggplot(Y, aes(x=factor.value, y=value)) +
+  facet_wrap(~group+class, nrow=2, scales="free_x") +
+  stat_smooth(method="loess", aes(color=group, group=feature), size=0.5, alpha=0.1) +
+  # facet_wrap(~class+sample_group, nrow=1, scales="fixed") +
+  # stat_smooth(method="loess", aes(color=sample_group), size=0.5, alpha=0.1) +
+  labs(x="", y="", title="") +
+  theme(
+    plot.title = element_blank(),
+    axis.title.y = element_text(colour="black", size=rel(1.2), vjust=1.5),
+    axis.title.x = element_text(colour="black", size=rel(1.2), vjust=1.5),
+    axis.text.x = element_text(size=rel(1.4), angle=90, hjust=1, vjust=0.5, color="black"),
+    axis.text.y = element_text(colour="black",size=rel(1.3)),
+    axis.line = element_line(colour="black"),
+    axis.ticks.y = element_line(colour="black"),
+    axis.ticks.x = element_line(colour="black"),
+    # strip.text = element_text(size=rel(1.3), color="black"),
+    strip.text = element_blank(),
+    strip.background = element_blank(),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    legend.position="none",
+    legend.text=element_text(size=15),
+    legend.title=element_blank(),
+    legend.background=element_blank(),
+    panel.border = element_blank()
+  )
+print(p)
+```
