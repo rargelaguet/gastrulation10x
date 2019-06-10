@@ -49,7 +49,7 @@ for m in range(len(views)):
     for g in range(len(sample_groups)):
         datafile = "%s/%s.txt.gz" % (args.input_folder, sample_groups[g])
         # data[m][g] = np.load(datafile)
-        data[m][g] = pd.read_csv(datafile, header=0, sep='\t').T
+        data[m][g] = pd.read_csv(datafile, header=0, sep='\t')
 
 # data = pd.read_csv(args.input_folder, delimiter="\t", header=0)
 
