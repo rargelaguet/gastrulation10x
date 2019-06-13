@@ -1,0 +1,121 @@
+```{r}
+library(umap)
+library(Rtsne)
+library(irlba)
+```
+
+```{r}
+theme_pub <- function() {
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    legend.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank()
+  )
+}
+```
+
+```{r}
+# algorithms <- c("tsne","umap")
+algorithms <- c("umap")
+views <- views_names(model)
+
+umap.defaults$n_neighbors <- 20
+umap.defaults$min_dist <- 0.7
+
+samples <- as.character(unname(unlist(samples_names(model))))
+```
+
+<!-- Non-linear dimensionality reduction from MOFA factors -->
+```{r}
+# Fetch factors
+Z <- get_factors(model) %>% do.call("rbind",.)
+
+# Scale Z by the variance explained
+r2 <- calculate_variance_explained(model)$r2_per_factor[[1]][,1]
+# Z.scaled <- Z %*% diag(r2*100)
+Z.scaled <- Z
+
+for (algorithm in algorithms) {
+  
+  set.seed(1)
+  if (algorithm=="tsne") {
+    tsne <- Rtsne(Z.scaled, check_duplicates=FALSE, pca=FALSE, theta=0.5, dims=2)
+    Z.out <- tsne$Y
+  } else if (algorithm=="umap") {
+    umap.out <- umap(Z.scaled, config = umap.defaults)
+    Z.out <- umap.out$layout
+  }
+  
+  to.plot <- Z.out %>% as.data.table %>% .[,cell:=rownames(Z)] %>%
+      merge(sample_metadata_filt, by="cell")
+
+  p1 <- ggplot(to.plot, aes(x=V1, y=V2, color=`celltype`)) +
+    geom_point(alpha=0.7, size=1.5) +
+    scale_color_manual(values=opts$colors) +
+    guides(colour = guide_legend(override.aes = list(size=3))) +
+    labs(x="Dimension 1", y="Dimension 2") +
+    theme_pub()
+  
+  pdf(sprintf("%s/MOFA_%s_celltype.pdf",io$pdfdir,algorithm), width=6, height=5.5, useDingbats = F)
+  print(p1)
+  dev.off()
+  
+  # p2 <- ggplot(to.plot, aes(x=V1, y=V2, color=`sample`)) +
+  #   geom_point(alpha=0.7, size=1.5) +
+  #   theme_pub()
+  # 
+  # pdf(sprintf("%s/%s_MOFA_sample.pdf",io$pdfdir,algorithm), width=6, height=4.5, useDingbats = F)
+  # print(p2)
+  # dev.off()
+}
+```
+
+<!-- Non-linear dimensionality reduction from PCA -->
+```{r}
+for (view in views) {
+  print(view)
+  Y <- model@training_data[[view]] %>% do.call("cbind",.) %>% t
+  
+  # Do (fast) PCA
+  # irlba.out <- irlba(A = Y, nv = model@dimensions$K)
+  # # Z.irlba <- irlba.out$u
+  # Z.irlba <- irlba.out$u %*% diag(irlba.out$d) # weight embeddings by variance explained
+  Z.irlba <- irlba::prcomp_irlba(x = Y, n = model@dimensions$K)$x
+  
+  for (algorithm in algorithms) {
+      
+    set.seed(1)
+    if (algorithm=="tsne") {
+      tsne <- Rtsne(Z.irlba, check_duplicates=FALSE, pca=FALSE, theta=0.5, dims=2, initial_dims=model@dimensions$K)
+      Z.out <- tsne$Y
+    } else if (algorithm=="umap") {
+      umap.out <- umap(Z.irlba, config = umap.defaults)
+      Z.out <- umap.out$layout
+    }
+  
+    to.plot <- Z.out %>% as.data.table %>% .[,cell:=samples] %>%
+        merge(sample_metadata_filt, by="cell")
+    
+    p1 <- ggplot(to.plot, aes(x=V1, y=V2, color=as.factor(`celltype`))) +
+      geom_point(alpha=0.7, size=1.5) +
+      guides(colour = guide_legend(override.aes = list(size=3))) +
+      labs(x="Dimension 1", y="Dimension 2") +
+      # scale_color_manual(values=opts$colors) +
+      theme_pub()
+    
+    # pdf(sprintf("%s/%s_%s_celltype.pdf",io$pdfdir,algorithm,view), width=6, height=5.5, useDingbats = F)
+    print(p1)
+    # dev.off()
+    
+    # p2 <- ggplot(to.plot, aes(x=V1, y=V2, color=`sample`)) +
+    #   geom_point(alpha=0.7, size=1.5) +
+    #   theme_pub()
+    # 
+    # pdf(sprintf("%s/%s_%s_sample.pdf",io$pdfdir,algorithm,view), width=6, height=4.5, useDingbats = F)
+    # print(p2)
+    # dev.off()
+  }
+}
+```

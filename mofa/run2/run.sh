@@ -13,23 +13,23 @@ gpujob() {
 }
 
 # I/O
-# input_folder="/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/mofa/data/E7.0/"
-# output_folder="/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/mofa/hdf5"
+input_folder="/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/mofa/data/E7.0/"
+output_folder="/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/mofa/hdf5"
 
-input_folder="/Users/ricard/data/gastrulation10x/mofa/data/E7.0"
-output_folder="/Users/ricard/data/gastrulation10x/mofa/hdf5"
+# input_folder="/Users/ricard/data/gastrulation10x/mofa/data/E7.0"
+# output_folder="/Users/ricard/data/gastrulation10x/mofa/hdf5"
 
 # Number of trials
 ntrials=1
 
 # Number of factors
-factors=15
+factors=10
 
 # ELBO Convergence settings
 convergence_mode="fast"
 maxiter=5000
-elbofreq=5
-start_elbo=500
+elbofreq=1
+start_elbo=100
 
 # Stochastic settings
 # batch_size=( 0.25 0.5 1.0 )
@@ -51,8 +51,8 @@ start_elbo=500
 # done
 
 for j in $(seq 1 $ntrials); do
-	outfile="$output_folder/sparsity/E7.0.hdf5"
+	outfile="$output_folder/E7.0.hdf5"
 	cmd="python run.py --input_folder $input_folder --outfile $outfile --factors $factors --iterations $maxiter --convergence_mode $convergence_mode --start_elbo $start_elbo --elbo_freq $elbofreq --seed 1"
-	# gpujob 25 1 research-rh7 $cmd
-	eval $cmd
+	gpujob 15 1 research-rh7 $cmd
+	# eval $cmd
 done

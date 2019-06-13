@@ -1,5 +1,6 @@
 from biofam.run.entry_point import entry_point
 from time import time
+from collections import OrderedDict
 import pandas as pd
 import numpy as np
 import sys
@@ -43,6 +44,7 @@ args = p.parse_args()
 
 views = [""]
 sample_groups = ["E7.0_10", "E7.0_14", "E7.0_15", "E7.0_30", "E7.0_31", "E7.0_32"]
+# sample_groups = ["E7.0_10"]
 data = [None]*len(views)
 for m in range(len(views)):
     data[m] = [None]*len(sample_groups)
@@ -65,13 +67,14 @@ lik="gaussian"
 ent.set_data_options(likelihoods=lik)
 
 # Set data
-features_names_dict = {k: list(v[0].columns.values) for (k,v) in zip(["RNA"],data)}
-samples_names_dict = {k: list(v.index) for (k,v) in zip(sample_groups,data[0])}
+# features_names_dict = {k: list(v[0].columns.values) for (k,v) in zip(["RNA"],data)}
+# samples_names_dict = {k: list(v.index) for (k,v) in zip(sample_groups,data[0])}
+features_names_dict = OrderedDict((k, list(v[0].columns.values)) for (k,v) in zip(["RNA"],data))
+samples_names_dict = OrderedDict( (k, list(v.index)) for (k,v) in zip(sample_groups,data[0]))
 ent.set_data_matrix(data, samples_names_dict=samples_names_dict, features_names_dict=features_names_dict)
 
-
 # Set model options
-ent.set_model_options(factors=args.factors, likelihoods=lik, sl_z=True, sl_w=True, ard_z=True, ard_w=True)
+ent.set_model_options(factors=args.factors, likelihoods=lik, sl_z=False, sl_w=True, ard_z=True, ard_w=True)
 
 # Set training options
 if args.seed == 0: args.seed = None
