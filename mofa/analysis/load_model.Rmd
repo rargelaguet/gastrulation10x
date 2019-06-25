@@ -1,0 +1,94 @@
+---
+title: ""
+output: 
+  BiocStyle::html_document: 
+    fig_width: 10
+    fig_height: 8
+---
+
+
+```{r}
+devtools::load_all("/Users/ricard/biofam/BioFAMtools", quiet=T)
+suppressPackageStartupMessages(library(data.table))
+suppressPackageStartupMessages(library(purrr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(scater))
+suppressPackageStartupMessages(library(reticulate))
+suppressPackageStartupMessages(library(RColorBrewer))
+suppressPackageStartupMessages(library(corrplot))
+```
+
+<!-- Define I/O and options -->
+```{r}
+source("/Users/ricard/gastrulation10x/mofa/load_settings.R")
+```
+
+<!-- Load sample metadata -->
+```{r}
+sample_metadata <- fread(io$sample.metadata) %>%
+  .[,c("cell","sample","stage","lineage10x","lineage10x_2")]
+```
+
+<!-- Load model -->
+```{r}
+file <- paste0(io$basedir,"/mofa/hdf5/E6.5-E7.25_1.hdf5")
+model <- load_model(file)
+```
+
+<!-- Subset and rename groups -->
+```{r}
+groups_names(model) <- c("E6.5 (1)", "E6.5 (2)", "E7.0 (1)", "E7.0 (2)", "E7.25 (1)", "E7.25 (2)")
+```
+
+
+<!-- Filter sample metadata -->
+```{r}
+cells <- as.character(unname(unlist(samples_names(model))))
+sample_metadata_filt <- sample_metadata %>% setkey(cell) %>% .[cells]
+stopifnot(all(cells==sample_metadata_filt$cell))
+```
+
+<!-- Subset factors -->
+```{r}
+r2 <- model@cache$variance_explained$r2_per_factor
+factors <- sapply(r2, function(x) x[,"RNA"]>0.001)
+model <- subset_factors(model, which(apply(factors,1,sum) >= 1))
+factors_names(model) <- paste("Factor",1:get_dimensions(model)[["K"]], sep=" ")
+```
+
+
+<!-- Plot variance explained -->
+```{r}
+tmp <- plot_variance_explained(model, x="group", y="factor", min_r2=0.005, plot_total = T, legend = T)
+
+p <- cowplot::plot_grid(plotlist=rev(tmp), ncol=1, rel_heights = c(1/3,2/3))
+
+pdf(paste0(io$pdfdir,"/r2_legend.pdf"), width=6, height=6)
+print(p)
+dev.off()
+```
+
+<!-- Run clustering on the variance explained results -->
+```{r}
+r2.matrix <- do.call("cbind",r2)
+colnames(r2.matrix) <- names(r2)
+r2.dendro <- as.dendrogram(hclust(d = dist(x = t(r2.matrix))))
+
+# Create dendrogram plot
+p <- ggdendro::ggdendrogram(data = r2.dendro, rotate = FALSE) + 
+  theme(
+    axis.text.y = element_blank()
+    )
+# p
+
+# pdf(paste0(io$pdfdir,"/clustering.pdf"), width=6, height=6)
+# print(p)
+# dev.off()
+```
+
+<!-- Plot factors correlation -->
+```{r}
+pdf(paste0(io$pdfdir,"/factor_correlation.pdf"), width=6, height=6)
+plot_factor_cor(model)
+dev.off()
+```

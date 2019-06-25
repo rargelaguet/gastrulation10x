@@ -3,7 +3,7 @@ library(purrr)
 # library(scater)
 library(Seurat)
 
-directory <- "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/atlas"
+directory <- "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/original"
 
 # Load cell metadata
 barcode.loc <- file.path(directory, "meta.tab")
@@ -26,25 +26,21 @@ data_mat <- data_mat[,cell.info$doublet==F & cell.info$stripped==F]
 cell.info <- cell.info[cell.info$doublet==F & cell.info$stripped==F,]
 
 # Create seurat object
-srat <- CreateSeuratObject(
-  raw.data = data_mat,
-  min.genes = 1, min.cells = 500,
-  meta.data = cell.info,
-  do.scale=FALSE, do.center=FALSE
+srat <- CreateSeuratObject(data_mat,
+  min.features = 1, min.cells = 100,
+  meta.data = cell.info
 )
-rm(data_mat)
 
 # Normalize data
-srat <- NormalizeData(srat, scale.factor=1000)
+# srat <- NormalizeData(srat)
 
 # Scale data
-srat <- ScaleData(srat, 
-  vars.to.regress="nUMI",
-  model.use = "linear",
-  do.scale = FALSE,
-  do.center = TRUE, 
-  do.par = TRUE, num.cores = 4
-)
+# srat <- ScaleData(srat, 
+#   vars.to.regress="nUMI",
+#   model.use = "linear",
+#   do.scale = FALSE, do.center = TRUE, 
+# )
+
 
 # Save
-saveRDS(srat, "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/atlas/seurat.rds")
+saveRDS(srat, "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/processed/seurat/seurat.rds")
