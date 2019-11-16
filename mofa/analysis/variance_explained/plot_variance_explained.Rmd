@@ -1,0 +1,109 @@
+
+<!-- Plot variance explained -->
+```{r}
+tmp <- plot_variance_explained(model, 
+  x="group", y="factor", 
+  min_r2=0.005, max_r2=0.18, plot_total = T, legend = T
+)
+
+p <- cowplot::plot_grid(plotlist=rev(tmp), ncol=1, rel_heights = c(1/3,2/3))
+
+pdf(paste0(io$pdfdir,"/r2_v2.pdf"), width=6, height=6)
+print(p)
+dev.off()
+```
+
+<!-- Plot variance explained across time -->
+
+```{r}
+r2 <- model@cache$variance_explained$r2_per_factor
+```
+
+```{r}
+tmp <- do.call("cbind",r2)[1:6,]
+colnames(tmp) <- names(r2)
+
+to.plot <- tmp %>% as.data.table(keep.rownames = T) %>%
+  setnames("rn","Factor") %>%
+  melt(id.vars="Factor", variable.name="replicate", value.name="r2") %>%
+  .[,stage:=as.factor(sapply(strsplit(as.character(replicate), split = " "),"[[",1))]
+
+p <- ggpubr::ggline(to.plot, x="stage", y="r2", add = c("mean_se"), group="Factor") +
+  # stat_cor(method = "pearson") +
+  facet_wrap(~Factor, scales="free_y", nrow=2) + 
+  labs(x="", y="Var. explained (%)") +
+  theme(
+    strip.background = element_blank()
+  )
+
+# pdf(paste0(io$pdfdir,"/r2_vs_time.pdf"), width=8, height=3.5)
+print(p)
+# dev.off()
+```
+
+```{r}
+tmp <- do.call("cbind",r2)[1:4,]
+colnames(tmp) <- names(r2)
+
+to.plot <- tmp %>% as.data.table(keep.rownames = T) %>%
+  setnames("rn","Factor") %>%
+  melt(id.vars="Factor", variable.name="replicate", value.name="r2") %>%
+  .[,stage:=as.factor(sapply(strsplit(as.character(replicate), split = " "),"[[",1))]
+
+p <- ggpubr::ggline(to.plot, x="stage", y="r2", add = c("mean"), group="Factor") +
+  geom_point(color="grey70", alpha=0.75) +
+  ggpubr::stat_cor() +
+  facet_wrap(~Factor, scales="free_y", nrow=2) + 
+  labs(x="", y="Var. explained (%)") +
+  theme(
+    strip.background = element_blank()
+  )
+
+pdf(paste0(io$pdfdir,"/r2_vs_time_lineplot.pdf"), width=8, height=3.5)
+print(p)
+dev.off()
+```
+
+```{r}
+tmp <- do.call("cbind",r2)[1:6,]
+colnames(tmp) <- names(r2)
+
+to.plot <- tmp %>% as.data.table(keep.rownames = T) %>%
+  setnames("rn","Factor") %>%
+  melt(id.vars="Factor", variable.name="replicate", value.name="r2") %>%
+  .[,stage:=as.factor(sapply(strsplit(as.character(replicate), split = " "),"[[",1))]
+
+p <- ggplot(to.plot[Factor%in%paste0("Factor",1:4)], aes(x=stage, y=r2, group=replicate)) +
+  geom_bar(stat="identity", fill="grey70", color="black", position = position_dodge(0.5), width=0.5) +
+  facet_wrap(~Factor, scales="free_y", nrow=2) + 
+  labs(x="", y="Variance explained (%)") +
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    axis.text = element_text(color="black")
+  )
+
+
+# pdf(paste0(io$pdfdir,"/r2_vs_time_barplot.pdf"), width=8, height=3.5)
+print(p)
+# dev.off()
+```
+
+
+<!-- Run clustering on the variance explained results -->
+```{r}
+# r2.matrix <- do.call("cbind",r2)
+# colnames(r2.matrix) <- names(r2)
+# r2.dendro <- as.dendrogram(hclust(d = dist(x = t(r2.matrix))))
+
+# Create dendrogram plot
+# p <- ggdendro::ggdendrogram(data = r2.dendro, rotate = FALSE) + 
+#   theme(
+#     axis.text.y = element_blank()
+#     )
+# p
+
+# pdf(paste0(io$pdfdir,"/clustering.pdf"), width=6, height=6)
+# print(p)
+# dev.off()
+```

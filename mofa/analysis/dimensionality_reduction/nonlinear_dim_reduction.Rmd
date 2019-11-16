@@ -1,0 +1,62 @@
+
+<!-- Non-linear dimensionality reduction from MOFA factors -->
+
+```{r}
+library(umap)
+library(Rtsne)
+```
+
+```{r}
+algorithms <- c("umap","tsne")
+# umap.defaults$n_neighbors <- 20
+# umap.defaults$min_dist <- 0.7
+
+samples <- as.character(unname(unlist(samples(model))))
+```
+
+```{r}
+# Fetch factors
+Z <- get_factors(model) %>% do.call("rbind",.)
+
+# Remove outlier Factors
+Z <- Z[,-c(6,10)]
+
+for (algorithm in algorithms) {
+  
+  set.seed(1)
+  if (algorithm=="tsne") {
+    tsne <- Rtsne(Z, check_duplicates=FALSE, pca=FALSE, theta=0.5, dims=2)
+    Z.out <- tsne$Y
+  } else if (algorithm=="umap") {
+    umap.out <- umap(Z, config = umap.defaults)
+    Z.out <- umap.out$layout
+  }
+  
+  to.plot <- Z.out %>% as.data.table %>% .[,cell:=rownames(Z)] %>%
+      merge(sample_metadata_filt, by="cell")
+
+  p <- ggplot(to.plot, aes(x=V1, y=V2, color=`lineage10x_2`)) +
+  # p <- ggplot(to.plot, aes(x=V1, y=V2, color=`stage`)) +
+    geom_point(alpha=0.7, size=0.75) +
+    scale_color_manual(values=opts$colors) +
+    guides(colour = guide_legend(override.aes = list(size=3))) +
+    labs(x="", y="") +
+    theme_classic() +
+    theme(
+      axis.text = element_blank(),
+      axis.ticks = element_blank()
+    )
+  
+  # pdf(sprintf("%s/MOFA_%s_celltype.pdf",io$pdfdir,algorithm), width=7, height=5.5, useDingbats = F)
+  print(p)
+  # dev.off()
+
+}
+```
+
+
+```{r}
+foo <- run_umap(model)
+foo <- run_tsne(model)
+```
+

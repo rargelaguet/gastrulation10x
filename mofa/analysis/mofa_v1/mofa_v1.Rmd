@@ -1,0 +1,111 @@
+---
+title: "Gastrulation: MOFA on RNA"
+output:
+  BiocStyle::html_document: 
+    toc: false
+    fig_width: 10
+    fig_height: 8
+---
+
+```{r load_modules, echo=FALSE, include=FALSE}
+library(MOFA)
+library(data.table)
+library(purrr)
+library(ggplot2)
+```
+
+<!-- Define I/O and options -->
+```{r define_opts, echo=FALSE}
+source("/Users/ricard/gastrulation10x/mofa/load_settings.R")
+io$pdfdir <- "/Users/ricard/data/gastrulation10x/mofa/pdf/mofa_v1"
+```
+
+<!-- Load model -->
+```{r}
+file <- paste0(io$basedir,"/mofa/hdf5/mofa_v1/E6.5-E7.25_1.hdf5")
+model <- loadModel(file)
+```
+
+Rename sample names
+```{r}
+sample_groups = c("E6.5_1", "E6.5_5", "E7.0_10", "E7.0_14", "E7.25_26", "E7.25_27")
+
+sample_names <- list()
+for (g in sample_groups) {
+  foo <- read.table(sprintf("/Users/ricard/data/gastrulation10x/mofa/data/%s.txt.gz",g))
+  sample_names[[g]] <- rownames(foo)
+}
+sampleNames(model) <- unname(unlist(sample_names))
+```
+
+Rename feature names
+```{r}
+# TO-DO...
+```
+
+Rename view names
+```{r}
+viewNames(model) <- c("RNA")
+```
+
+<!-- Load sample metadata -->
+```{r}
+sample_metadata <- fread(io$sample.metadata) %>%
+  .[,c("cell","sample","stage","lineage10x","lineage10x_2")]
+
+sample_metadata_filt <- sample_metadata %>% setkey(cell) %>% .[MOFA::sampleNames(model)]
+```
+
+<!-- Calculate variance explained -->
+```{r}
+r2 <- calculateVarianceExplained(model)$R2PerFactor
+```
+
+```{r}
+p <- plotVarianceExplained(model)
+
+pdf(paste0(io$pdfdir,"/r2.pdf"), width=4, height=6)
+print(p)
+dev.off()
+```
+
+
+<!-- Inspect factors -->
+```{r}
+p <- plotFactorScatter(
+  model, 
+  factors=c(1,2), 
+  color_by=sample_metadata_filt$lineage10x_2,
+  
+)
+p <- p +
+  scale_color_manual(values=opts$colors) +
+  labs(x=sprintf("Factor 1 (%.2f%%)",r2[1,]*100), y=sprintf("Factor 2 (%.2f%%)",r2[2,]*100)) +
+  theme(
+    legend.position = "none"
+  )
+
+pdf(paste0(io$pdfdir,"/Factor12_bycelltype.pdf"), useDingbats = F, onefile = F, width=5, height=5)
+print(p)
+dev.off()
+```
+
+```{r}
+p <- plotFactorScatter(
+  model, 
+  factors=c(1,2), 
+  color_by=as.factor(sample_metadata_filt$sample)
+)
+
+p <- p +
+  scale_color_brewer(palette = "Dark2") +
+  labs(x=sprintf("Factor 1 (%.2f%%)",r2[1,]*100), y=sprintf("Factor 2 (%.2f%%)",r2[2,]*100))
+
+pdf(paste0(io$pdfdir,"/Factor12_embryo.pdf"), useDingbats = F, onefile = F, width=5, height=4)
+print(p)
+dev.off()
+```
+
+```{r}
+# plotWeights(model, view="RNA", factor=1, scale=F, nfeatures = 25)
+```

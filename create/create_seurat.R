@@ -1,50 +1,113 @@
 library(data.table)
 library(purrr)
-# library(scater)
 library(Seurat)
 
-directory <- "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/atlas"
+# directory <- "/Users/ricard/data/10x_gastrulation_TetChimera/original/test"
+directory <- "/hps/nobackup2/research/stegle/users/ricard/10x_gastrulation_TetChimera/original/test"
 
-# Load cell metadata
-barcode.loc <- file.path(directory, "meta.tab")
-cell.info <- read.delim(barcode.loc, header = TRUE, colClasses = "character", stringsAsFactors = FALSE, sep="\t")
-rownames(cell.info) <- cell.info$cell
+##############################
+## Load and merge data sets ##
+##############################
+
+samples <- c("SIGAA3_E8.5_pool1_Host-WT_L001", "SIGAB3_E8.5_pool1_TET-TKO_L002", "SIGAC3_E8.5_pool2_Host-WT_L003", "SIGAD3_E8.5_pool2_TET-TKO_L004", "SIGAE3_E7.5_pool1_Host-WT_L005", "SIGAF3_E7.5_pool1_TET-TKO_L006", "SIGAG3_E8.5_hashing_Host-WT_L007", "SIGAH3_E8.5_hasting_TET-TKO_L008")
+genotype <- c("WT", "TKO", "WT", "TKO", "WT", "TKO", "WT", "TKO"); names(genotype) <- samples
+
+mtx <- list()
+cell.info <- list()
+gene.info <- list()
+for (i in samples) {
   
-# Load gene metadata
-gene.loc <- file.path(directory, "genes.tsv")
-gene.info <- read.delim(gene.loc, header = FALSE, colClasses = "character", stringsAsFactors = FALSE, sep="\t")
-colnames(gene.info) <- c("ens_id","gene_id")
+  # Load cell metadata
+  barcode.loc <- sprintf("%s/%s_barcodes.tsv",directory,i)
+  cell.info[[i]] <- read.delim(barcode.loc, header = FALSE, colClasses = "character", stringsAsFactors = FALSE, sep="\t")
+  colnames(cell.info[[i]]) <- c("barcode")
+  cell.info[[i]]$genotype <- genotype[[i]]
+  cell.info[[i]]$batch <- i
+  
+  # Load gene metadata (note we could just load this once)
+  gene.loc <- sprintf("%s/%s_features.tsv",directory,i)
+  gene.info[[i]] <- read.delim(gene.loc, header = FALSE, colClasses = "character", stringsAsFactors = FALSE, sep="\t")[,c(1,2)]
+  colnames(gene.info[[i]]) <- c("ens_id","gene_id")
+  
+  # Load matrix  
+  matrix.loc <- sprintf("%s/%s_matrix.mtx",directory,i)
+  mtx[[i]] <- Matrix::readMM(matrix.loc)
+  rownames(mtx[[i]]) <- gene.info[[i]]$ens_id
+  colnames(mtx[[i]]) <- cell.info[[i]]$V1
+}
+gene.info <- gene.info[[1]]
 
-# Load matrix  
-matrix.loc <- file.path(directory, "raw_counts.mtx")
-data_mat <- Matrix::readMM(matrix.loc)
-rownames(data_mat) <- gene.info$gene_id
-colnames(data_mat) <- cell.info$cell
+# Concatenate cell  metadata
+cell.info <- do.call("rbind",cell.info)
+cell.info$cell <- paste("cell",1:nrow(cell.info),sep="_")
+rownames(cell.info) <- cell.info$cell
 
-# Subset  
-data_mat <- data_mat[,cell.info$doublet==F & cell.info$stripped==F]
-cell.info <- cell.info[cell.info$doublet==F & cell.info$stripped==F,]
+# Concatenate matrices
+mtx <- do.call("cbind",mtx)
+colnames(mtx) <- cell.info$cell
+
+################
+## Processing ##
+################
+
+# Remove cells with few UMIs mapping to the mouse genome
+mouse.genes <- grep("mm10",rownames(mtx))
+foo <- Matrix::colSums( mtx[mouse.genes,] )
+cells.to.keep <- colnames(mtx)[which(foo>1000)]
+mtx <- mtx[mouse.genes,cells.to.keep]
+
+# Rename genes
+mouse.genes <- rownames(mtx)
+mouse.genes <- substr(mouse.genes,8,nchar(mouse.genes))
+rownames(mtx) <- mouse.genes
+
+# Remove duplicated genes (BECAUSE OF GENE SYMBOLS MATCHING TO MULTIPLE ESNEMBL IDS, TO-DO...)
+# rownames(mtx)[duplicated(rownames(mtx))]
+
+# Subset protein-coding genes
+genes <- fread("/Users/ricard/data/ensembl/mouse/v87/BioMart/mRNA/Mmusculus_genes_BioMart.87.txt")[,ens_id]
+genes <- genes[genes %in% mouse.genes]
+mouse.genes <- mouse.genes[mouse.genes %in% genes]
+mtx <- mtx[mouse.genes,]
+
+# Subset cell metadata
+cell.info <- cell.info[colnames(mtx),]
+
+# Subset gene metadata
+gene.info <- gene.info[grep("mm10",gene.info$gene_id),]
+gene.info$gene_id <- substr(gene.info$gene_id,8,nchar(gene.info$gene_id))
+gene.info <- gene.info[rownames(mtx),]
+
+############
+## Seurat ##
+############
 
 # Create seurat object
-srat <- CreateSeuratObject(
-  raw.data = data_mat,
-  min.genes = 1, min.cells = 500,
-  meta.data = cell.info,
-  do.scale=FALSE, do.center=FALSE
+srat <- CreateSeuratObject(mtx,
+  min.features = 1, min.cells = 100,
+  meta.data = cell.info
 )
-rm(data_mat)
 
 # Normalize data
-srat <- NormalizeData(srat, scale.factor=1000)
+srat <- NormalizeData(srat)
 
 # Scale data
-srat <- ScaleData(srat, 
-  vars.to.regress="nUMI",
-  model.use = "linear",
-  do.scale = FALSE,
-  do.center = TRUE, 
-  do.par = TRUE, num.cores = 4
-)
+# srat <- ScaleData(srat,
+#   vars.to.regress="nUMI",
+#   model.use = "linear",
+#   do.scale = FALSE, do.center = TRUE,
+# )
 
-# Save
-saveRDS(srat, "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/atlas/seurat.rds")
+##########################
+## SingleCellExperiment ##
+##########################
+
+# sce <- as.SingleCellExperiment(srat)
+
+##########
+## Save ##
+##########
+
+saveRDS(srat, "/Users/ricard/data/10x_gastrulation_TetChimera/processed/seurat.rds")
+# saveRDS(sce, "/Users/ricard/data/10x_gastrulation_TetChimera/processed/sce.rds")
+

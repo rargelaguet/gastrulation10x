@@ -1,4 +1,4 @@
-from biofam.run.entry_point import entry_point
+from mofapy2.run.entry_point import entry_point
 from time import time
 from collections import OrderedDict
 import pandas as pd
@@ -40,11 +40,11 @@ args = p.parse_args()
 ## Load data ##
 ###############
 
-
-
 views = [""]
-sample_groups = ["E7.0_10", "E7.0_14", "E7.0_15", "E7.0_30", "E7.0_31", "E7.0_32"]
-# sample_groups = ["E7.0_10"]
+# sample_groups = ["E6.5-E7.0_1", "E6.5-E7.0_10", "E6.5-E7.0_14", "E6.5-E7.0_15", "E6.5-E7.0_18", "E6.5-E7.0_30", "E6.5-E7.0_31", "E6.5-E7.0_32", "E6.5-E7.0_5"]
+# sample_groups = ["E6.5_18", "E6.5_1", "E6.5_5", "E7.0_10", "E7.0_14", "E7.0_15", "E7.0_30", "E7.0_31", "E7.0_32", "E7.25_23", "E7.25_26", "E7.25_27", "E7.5_19", "E7.5_20", "E7.5_2", "E7.5_3", "E7.5_4", "E7.5_6"]
+sample_groups = [ "E6.5_1", "E6.5_5", "E7.0_10", "E7.0_14", "E7.25_26", "E7.25_27"]
+# sample_groups = [ "E6.5_1"]
 data = [None]*len(views)
 for m in range(len(views)):
     data[m] = [None]*len(sample_groups)
@@ -67,14 +67,12 @@ lik="gaussian"
 ent.set_data_options(likelihoods=lik)
 
 # Set data
-# features_names_dict = {k: list(v[0].columns.values) for (k,v) in zip(["RNA"],data)}
-# samples_names_dict = {k: list(v.index) for (k,v) in zip(sample_groups,data[0])}
-features_names_dict = OrderedDict((k, list(v[0].columns.values)) for (k,v) in zip(["RNA"],data))
-samples_names_dict = OrderedDict( (k, list(v.index)) for (k,v) in zip(sample_groups,data[0]))
-ent.set_data_matrix(data, samples_names_dict=samples_names_dict, features_names_dict=features_names_dict)
+features_names = [ x[0].columns.values for x in data ]
+samples_names = [ x.index for x in data[0] ]
+ent.set_data_matrix(data, views_names=["RNA"], groups_names=sample_groups, samples_names=samples_names, features_names=features_names)
 
 # Set model options
-ent.set_model_options(factors=args.factors, likelihoods=lik, sl_z=False, sl_w=True, ard_z=True, ard_w=True)
+ent.set_model_options(factors=args.factors, likelihoods=lik, spikeslab_factors=False, spikeslab_weights=True, ard_factors=True, ard_weights=True)
 
 # Set training options
 if args.seed == 0: args.seed = None

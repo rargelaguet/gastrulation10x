@@ -22,7 +22,8 @@ read10xCounts.rna <- function (directory) {
 }
 
 # Load data
-sce <- read10xCounts.rna("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/atlas")
+# sce <- read10xCounts.rna("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/atlas")
+sce <- read10xCounts.rna("/Users/ricard/data/gastrulation10x/original")
 dim(sce)
 
 # Load size factors
@@ -45,7 +46,8 @@ saveRDS(sce, "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/atlas/
 ## Create Seurat ##
 ###################
 
-sce <- readRDS("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/atlas/sce.rds")
+# sce <- readRDS("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/atlas/sce.rds")
+sce <- readRDS("/Users/ricard/data/gastrulation10x/processed/SingleCellExperiment.rds")
 srat <- as.seurat(sce)
 
 srat <- NormalizeData(srat, scale.factor=1000)

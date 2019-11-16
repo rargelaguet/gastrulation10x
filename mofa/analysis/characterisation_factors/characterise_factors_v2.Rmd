@@ -1,0 +1,91 @@
+
+<!-- Factor 9  -->
+
+```{r}
+sample_metadata_filt[,lineage10x_3:=lineage10x_2]
+sample_metadata_filt[lineage10x=="ExE mesoderm",lineage10x_3:="Mesenchyme"]
+sample_metadata_filt[lineage10x=="Mesenchyme",lineage10x_3:="Mesenchyme"]
+# sample_metadata_filt[lineage10x=="Nascent mesoderm",lineage10x_3:="Nascent mesoderm"]
+```
+
+```{r}
+# opts$colors["Nascent mesoderm"] <- "pink"
+opts$colors["Mesenchyme"] <- "#CDAA7D"
+```
+
+Plot factors
+```{r}
+p <- plot_factor(
+  model,
+  factor = 9,
+  group_by = "group",
+  color_by = sample_metadata_filt$lineage10x_3, 
+  add_violin = F, color_violin = T,
+  dodge=T, dot_size=1, legend = T, rasterize = F
+)
+p <- p + scale_color_manual(values=opts$colors) + scale_fill_manual(values=opts$colors)
+p <- p + theme(
+  strip.text = element_text(size=rel(1.3), color="black")
+)
+
+print(p)
+
+pdf(paste0(io$pdfdir,"/Factor9_values.pdf"), width=opts$factors.width, height=opts$factors.height, useDingbats = F)
+print(p)
+dev.off()
+```
+
+Plot weights
+```{r}
+# p <- plot_weights(model, 
+#   view = "RNA", 
+#   factor = 1, 
+#   nfeatures = 10,
+#   text_size = 5,
+#   scale=T, abs=F
+# )
+
+p <- plot_top_weights(model, 
+  view = "RNA", 
+  factor = 9, 
+  nfeatures = 10,
+  scale=T, abs=T, 
+)
+
+pdf(paste0(io$pdfdir,"/Factor9_loadings.pdf"), width=3.5, height=3, useDingbats = F)
+print(p)
+dev.off()
+```
+
+Plot factor coloured by gene expression
+```{r}
+genes <- c("Phlda2","Lefty2","Tdgf1","Mest")
+
+for (i in genes) {
+  
+  p <- plot_factor(model,
+    factor = 9,
+    group_by = "group",
+    color_by = i,
+    rasterize = F,
+    legend=F
+  )
+  
+  # p <- p + scale_colour_gradientn(colours = terrain.colors(10))
+  p <- p + theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks.y = element_blank(),
+    strip.text = element_blank(),
+    strip.background = element_blank()
+  )
+  # print(p)
+  
+  pdf(sprintf("%s/Factor9_%s.pdf",io$pdfdir,i), width=4.75, height=2.5, useDingbats = F)
+  print(p)
+  dev.off()
+}
+```
+
+
+

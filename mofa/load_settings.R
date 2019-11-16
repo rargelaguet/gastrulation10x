@@ -59,3 +59,16 @@ opts$colors = c(
 	"ExE ectoderm" = "#989898",
 	"Parietal endoderm" = "#1A1A1A"
 )
+
+
+opts$colors <- c(
+  "Epiblast" = "grey70",
+  "Primitive Streak" = "sandybrown",
+  "Mesoderm" = "violetred",
+  "ExE endoderm" = "#548B54",
+  "ExE ectoderm" = "black"
+)
+
+# ignore...
+opts$factors.width <- 8
+opts$factors.height <- 4
