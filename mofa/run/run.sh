@@ -20,7 +20,7 @@ output_folder="/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/mofa/
 # output_folder="/Users/ricard/data/gastrulation10x/mofa/hdf5"
 
 # Number of trials
-ntrials=1
+ntrials=3
 
 # Number of factors
 factors=10
