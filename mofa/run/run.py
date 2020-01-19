@@ -1,3 +1,16 @@
+#!/g/stegle/ricard/anaconda/envs/mofa2/bin/python
+#SBATCH -N 1                        # number of nodes
+#SBATCH -n 1                        # number of cores
+#SBATCH --mem 10G                   # memory pool for all cores
+#SBATCH -t 0-10:00                   # runtime limit (D-HH:MM:SS)
+#SBATCH -o slurm.%N.%j.out          # STDOUT
+#SBATCH -e slurm.%N.%j.err          # STDERR
+#SBATCH --mail-type=END,FAIL        # notifications for job done & fail
+#SBATCH --mail-user=ricard@ebi.ac.uk
+
+# sbatch -p gpu --gres gpu:1 run.py
+
+
 from mofapy2.run.entry_point import entry_point
 from time import time
 from collections import OrderedDict

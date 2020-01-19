@@ -27,8 +27,9 @@ sample_metadata <- fread(io$sample.metadata) %>%
 
 <!-- Load model -->
 ```{r}
-file <- paste0(io$basedir,"/mofa/hdf5/E6.5-E7.25_1.hdf5")
-model <- load_model(file, remove_outliers = T)
+# file <- paste0(io$basedir,"/mofa/hdf5/E6.5-E7.25_1.hdf5")
+file <- paste0(io$basedir,"/mofa/hdf5/model_1.hdf5")
+model <- load_model(file, remove_outliers = F)
 ```
 
 <!-- Add sample metadata to the model -->
@@ -56,6 +57,10 @@ groups(model) <- c("E6.5 (1)", "E6.5 (2)", "E7.0 (1)", "E7.0 (2)", "E7.25 (1)", 
 # factors <- sapply(r2, function(x) x[,"RNA"]>0.001)
 # model <- subset_factors(model, which(apply(factors,1,sum) >= 1))
 # factors(model) <- paste("Factor",1:get_dimensions(model)[["K"]], sep=" ")
+```
+
+```{r}
+save(model, file="/Users/ricard/data/mofa2_vignettes/gastrulation10x_mofa.RData")
 ```
 
 <!-- Save model as RDS file -->
