@@ -11,23 +11,28 @@ matrix.please <- function(x) {
   m
 }
 
+################
 ## Define I/O ##
+################
 
 if (grepl("ricard",Sys.info()['nodename'])) {
   source("/Users/ricard/gastrulation10x/mofa/load_settings.R")
-  io$basedir <- "/Users/ricard/data/gastrulation10x"
-  io$gene.metadata <- "/Users/ricard/data/ensembl/mouse/v87/BioMart/mRNA/Mmusculus_genes_BioMart.87.txt"
-} else {
+} else if (grepl("ebi",Sys.info()['nodename'])) {
   source("/homes/ricard/gastrulation10x/mofa/load_settings.R")
-  io$basedir <- "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x"
+} else {
+  stop("Computer not recognised")
 }
+
+io$seurat <- sprintf("%s/processed/seurat_E6.5_to_E7.5.rds",io$basedir)
 io$outdir <- paste0(io$basedir,"/mofa")
 # io$outfile <- paste0(io$outdir,"/data/E6.5-E7.0.txt")
 
 
+####################
 ## Define options ##
+####################
 
-# Define which stage and lineages to look at 
+# Define stage and lineages
 opts$stage_lineage10x_2 <- c(
 	"E6.5_Epiblast",
   "E6.5_ExE ectoderm",
@@ -59,47 +64,47 @@ opts$stage_lineage10x_2 <- c(
 ###############
 
 # Load seurat object
-# io$seurat <- sprintf("%s/processed/seurat_%s.rds",io$basedir,opts$stage)
-io$seurat <- sprintf("%s/processed/seurat_E6.5_to_E7.5.rds",io$basedir)
 seurat <- readRDS(io$seurat)
 
-# Load sample metadata
-# meta.data <- seurat@meta.data
+# Load cell metadata
 meta.data <- fread(io$sample.metadata)
 
 #################
 ## Filter data ##
 #################
 
-## Filter out cells ##
-
 # Filter out small lineages
-if (is.null(opts$stage_lineage10x_2)) {
-  small_lineages <- names(which(table(seurat@meta.data$celltype) < 5))
-  cells.use <- rownames(seurat@meta.data[!seurat@meta.data$celltype %in% small_lineages,])
-# Filter out preselected lineages
-} else {
-  cells.use <- meta.data %>%   
-    .[,stage_lineage:=paste(stage,lineage10x_2,sep="_")] %>%
-    .[stage_lineage%in%opts$stage_lineage,cell]
-}
+# small_lineages <- names(which(table(seurat@meta.data$celltype) < 5))
+# cells.use <- rownames(seurat@meta.data[!seurat@meta.data$celltype %in% small_lineages,])
+
+# Subset preselected lineages
+cells.use <- meta.data %>%   
+  .[,stage_lineage:=paste(stage,lineage10x_2,sep="_")] %>%
+  .[stage_lineage%in%opts$stage_lineage,cell]
 seurat <- subset(seurat, cells=cells.use)
 
-# Subset
+# Subset stages
 seurat@meta.data$stage_sample <- paste(seurat@meta.data$stage,seurat@meta.data$sample, sep="_")
 cells <- rownames(seurat@meta.data[seurat@meta.data$stage_sample %in% c("E6.5_1", "E6.5_5", "E7.0_10", "E7.0_14", "E7.25_26", "E7.25_27"),])
 seurat <- subset(seurat, cells=cells)
 
-# Normalize
+#########################
+## Normalise and scale ##
+#########################
+
+# Normalise
 seurat <- NormalizeData(seurat, scale.factor=1000)
 
-# Scale and regress out batch effects
+# Scale and regress out technical effects (batches)
 seurat <- ScaleData(
   seurat,
-  vars.to.regress=c("sample"),
-  # model.use = "linear",
+  vars.to.regress = c("sample"),
   do.scale = FALSE, do.center = FALSE
 )
+
+##############################
+## Dimensionality reduction ##
+##############################
 
 # tmp <- FindVariableFeatures(seurat, nfeatures=5000)
 # tmp <- subset(tmp, features=tmp@assays$RNA@var.features)
@@ -113,14 +118,13 @@ seurat <- ScaleData(
 # Seurat::DimPlot(tmp, reduction="pca", dims = c(5,6))
 # Seurat::DimPlot(tmp, reduction="umap", dims = c(1,2))
 
-# Select highly variable genes
+
+##################################
+## Select highly variable genes ##
+##################################
+
 seurat <- FindVariableFeatures(seurat, nfeatures=5000)
 seurat <- subset(seurat, features=seurat@assays$RNA@var.features)
-
-
-save(seurat, file="/Users/ricard/MOFAdata/data/gastrulation10x_seurat.RData")
-
-
 
 
 ###################
@@ -139,58 +143,15 @@ for (i in 1:length(m_batch)) {
 
 lapply(m_batch,dim)
 
-###################################
-## Dimensionality reduction test ##
-###################################
-
-# # Do fast PCA with prcomp_irba
-# Z.irlba <- irlba::prcomp_irlba(x = t(m), n = 50)$x
-
-# # t-SNE
-# # tsne <- Rtsne(Z.irlba, check_duplicates=FALSE, pca=FALSE, theta=0.5, dims=2, initial_dims=model@dimensions$K)
-# # Z.out <- tsne$Y
-
-# # UMAP
-# umap.defaults$n_neighbors <- 20
-# umap.defaults$min_dist <- 0.7
-# umap.out <- umap(Z.irlba, config = umap.defaults)
-# Z.out <- umap.out$layout
-
-# to.plot <- Z.out %>% as.data.table %>% .[,cell:=colnames(m)] %>%
-#   merge(meta.data, by="cell")
-
-# p <- ggplot(to.plot, aes(x=V1, y=V2, color=`celltype`)) +
-#   geom_point(alpha=0.7, size=1.5) +
-#   labs(x="", y="") +
-#   scale_color_manual(values=opts$colors) +
-#   theme_classic()
-#   # theme(
-#   #   legend.position = "none"
-#   # )
-# # p
-
-# pdf(paste0(io$outdir,"/celltype.pdf"))
-# print(p)
-# dev.off()
-
-# p <- ggplot(to.plot, aes(x=V1, y=V2, color=sample)) +
-#   geom_point(alpha=0.7, size=1.5) +
-#   labs(x="", y="") +
-#   theme_classic()
-# # p
-
-# pdf(paste0(io$outdir,"/batch.pdf"))
-# print(p)
-# dev.off()
-
 
 ##########
 ## Save ##
 ##########
 
-# write.table(t(m), io$outfile, row.names=T, col.names=T, quote=F, sep="\t")
-# system(sprintf("gzip -f %s",io$outfile))
+# Save seurat object
+# save(seurat, file=io$outfile.seurat)
 
+# Save matrices
 for (i in names(m_batch)) {
   filename <- sprintf("%s/data/%s.txt",io$outdir,i)
   write.table(m_batch[[i]], filename, row.names=T, col.names=T, quote=F, sep="\t")

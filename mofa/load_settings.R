@@ -1,16 +1,25 @@
+################
 ## Define I/O ##
+################
+
 io <- list()
 if (grepl("ricard",Sys.info()['nodename'])) {
   io$basedir <- "/Users/ricard/data/gastrulation10x"
   io$gene.metadata <- "/Users/ricard/data/ensembl/mouse/v87/BioMart/mRNA/Mmusculus_genes_BioMart.87.txt"
-} else {
+} else if (grepl("ebi",Sys.info()['nodename'])) {
   io$basedir <- "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x"
   io$gene.metadata <- "/hps/nobackup2/research/stegle/users/ricard/ensembl/mouse/v87/BioMart/mRNA/Mmusculus_genes_BioMart.87.txt"
+} else {
+	stop("Computer not recognised")
 }
+
 io$pdfdir <- paste0(io$basedir,"/mofa/pdf")
 io$sample.metadata <- paste0(io$basedir,"/sample_metadata2.txt")
 
+####################
 ## Define options ##
+####################
+
 opts <- list()
 opts$colors = c(
   "Epiblast" = "#635547",
@@ -70,5 +79,5 @@ opts$colors <- c(
 )
 
 # ignore...
-opts$factors.width <- 8
-opts$factors.height <- 4
+# opts$factors.width <- 8
+# opts$factors.height <- 4
