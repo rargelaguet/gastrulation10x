@@ -1,11 +1,12 @@
 ---
-title: ""
+title: "Gastrulation 10x: load pre-trained MOFA model"
 output: 
   BiocStyle::html_document: 
     fig_width: 10
     fig_height: 8
 ---
 
+<!-- Load modules -->
 
 ```{r}
 suppressPackageStartupMessages(library(data.table))
@@ -15,43 +16,55 @@ suppressPackageStartupMessages(library(MOFA2))
 ```
 
 <!-- Define I/O and options -->
+
 ```{r}
-source("/Users/ricard/gastrulation10x/mofa/load_settings.R")
+if (grepl("ricard",Sys.info()['nodename'])) {
+  source("/Users/ricard/gastrulation10x/mofa/load_settings.R")
+} else {
+	stop("Computer not recognised")
+}
 ```
 
 <!-- Load sample metadata -->
+
 ```{r}
 sample_metadata <- fread(io$sample.metadata) %>%
   .[,c("cell","sample","stage","lineage10x","lineage10x_2")]
 ```
 
 <!-- Load model -->
+
 ```{r}
-# file <- paste0(io$basedir,"/mofa/hdf5/E6.5-E7.25_1.hdf5")
 file <- paste0(io$basedir,"/mofa/hdf5/model_1.hdf5")
-model <- load_model(file, remove_outliers = F)
+model <- load_model(file)
 ```
 
 <!-- Add sample metadata to the model -->
+
 ```{r}
+# Subset cells
 cells <- as.character(unname(unlist(samples(model))))
 sample_metadata_filt <- sample_metadata %>% setkey(cell) %>% .[cells]
 stopifnot(all(cells==sample_metadata_filt$cell))
 
+# Modify columns  
 sample_metadata_filt[,lineage10x:=NULL]
 sample_metadata_filt %>% setnames("lineage10x_2","lineage")
 sample_metadata_filt %>% .[,group:=paste(stage,sample,sep="_")] %>% .[,sample:=NULL]
 sample_metadata_filt %>% setnames("cell","sample")
 
+# Add sample metadata to the MOFA object
 model@samples_metadata <- sample_metadata_filt
 ```
 
-<!-- Subset and rename groups -->
+<!-- Rename groups -->
+
 ```{r}
 groups(model) <- c("E6.5 (1)", "E6.5 (2)", "E7.0 (1)", "E7.0 (2)", "E7.25 (1)", "E7.25 (2)")
 ```
 
 <!-- Subset factors -->
+
 ```{r}
 # r2 <- model@cache$variance_explained$r2_per_factor
 # factors <- sapply(r2, function(x) x[,"RNA"]>0.001)
@@ -59,20 +72,22 @@ groups(model) <- c("E6.5 (1)", "E6.5 (2)", "E7.0 (1)", "E7.0 (2)", "E7.25 (1)", 
 # factors(model) <- paste("Factor",1:get_dimensions(model)[["K"]], sep=" ")
 ```
 
-```{r}
-save(model, file="/Users/ricard/data/mofa2_vignettes/gastrulation10x_mofa.RData")
-```
-
-<!-- Save model as RDS file -->
-```{r}
-# model@expectations$Y <- NULL
-saveRDS(model, "/Users/ricard/data/gastrulation10x/mofa/model.rds")
-```
-
 <!-- Plot factors correlation -->
+
 ```{r}
 # pdf(paste0(io$pdfdir,"/factor_correlation.pdf"), width=6, height=6)
 # plot_factor_cor(model)
 # dev.off()
 ```
+
+<!-- Save model -->
+
+```{r}
+# Rdata object
+# save(model, file="/Users/ricard/data/mofa2_vignettes/gastrulation10x_mofa.RData")
+
+# rds object
+# saveRDS(model, "/Users/ricard/data/gastrulation10x/mofa/model.rds")
+```
+
 

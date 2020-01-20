@@ -1,4 +1,10 @@
-<!-- Gene set enrichment analysis -->
+---
+title: "Gastrulation 10x: gene set enrichment analysis"
+output: 
+  BiocStyle::html_document: 
+    fig_width: 10
+    fig_height: 8
+---
 
 Load MsigDb gene set
 ```{r go_enrichment, echo=FALSE}

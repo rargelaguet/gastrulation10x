@@ -1,14 +1,15 @@
 ---
-title: "Gastrulation: Robustness analysis of MOFA models"
+title: "Gastrulation 10x: Robustness analysis of MOFA models"
 output:
   BiocStyle::html_document: 
     toc: false
     fig_width: 10
     fig_height: 8
 ---
+<!-- Load modules -->
 
 ```{r load_modules, echo=FALSE, include=FALSE}
-library(BioFAMtools)
+library(MOFA2)
 library(data.table)
 library(purrr)
 library(ggplot2)
@@ -17,6 +18,7 @@ library(pheatmap)
 
 
 <!-- Define settings -->
+
 ```{r}
 io <- list()
 io$model.dir <- "/Users/ricard/data/gastrulation10x/mofa/hdf5"
@@ -27,6 +29,7 @@ opts$ntrials <- 3
 ```
 
 <!-- Load precomputed models -->
+
 ```{r}
 MOFAlist <- list()
 for (i in 1:opts$ntrials) {
@@ -36,6 +39,7 @@ for (i in 1:opts$ntrials) {
 ```
 
 <!-- Subset active factors -->
+
 ```{r}
 # for (i in 1:opts$ntrials) {
 #   r2 <- calculateVarianceExplained(MOFAlist[[i]])$R2PerFactor
@@ -45,6 +49,7 @@ for (i in 1:opts$ntrials) {
 ```
 
 <!-- Assess robustness of factors -->
+
 ```{r}
 pdf(paste0(io$outdir,"/robustness.pdf"), height=7, width=8.5)
 compare_factors(MOFAlist, show_rownames=F, show_colnames=F)
@@ -52,6 +57,7 @@ dev.off()
 ```
 
 <!-- Select model with the highest ELBO -->
+
 ```{r}
 compare_models(MOFAlist)
 ```
