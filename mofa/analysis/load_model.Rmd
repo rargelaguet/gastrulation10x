@@ -15,14 +15,12 @@ suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(MOFA2))
 ```
 
-<!-- Define I/O and options -->
+<!-- Define I/O -->
 
 ```{r}
-if (grepl("ricard",Sys.info()['nodename'])) {
-  source("/Users/ricard/gastrulation10x/mofa/load_settings.R")
-} else {
-	stop("Computer not recognised")
-}
+io <- list()
+io$basedir <- "/Users/ricard/data/gastrulation10x_mofa"
+io$sample.metadata <- paste0(io$basedir,"/sample_metadata.txt.gz")
 ```
 
 <!-- Load sample metadata -->
@@ -35,7 +33,7 @@ sample_metadata <- fread(io$sample.metadata) %>%
 <!-- Load model -->
 
 ```{r}
-file <- paste0(io$basedir,"/mofa/hdf5/model_1.hdf5")
+file <- paste0(io$basedir,"/hdf5/model_1.hdf5")
 model <- load_model(file)
 ```
 

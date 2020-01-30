@@ -99,9 +99,8 @@ ent.build()
 # Train the model
 ent.run()
 
-
 ####################
 ## Save the model ##
 ####################
 
-ent.save(args.outfile, save_data=False)
+ent.save(args.outfile, save_data=True)

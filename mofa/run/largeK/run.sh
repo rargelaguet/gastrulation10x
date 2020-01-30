@@ -41,10 +41,10 @@ num_factors=25
 #######################
 
 # Convergence mode ("fast", "medium", "slow")
-convergence_mode="medium"
+convergence_mode="fast"
 
 # Maximum number of iterations
-iter=2500
+iter=1000
 
 # frequency of ELBO computation
 elbofreq=1
@@ -55,6 +55,7 @@ start_elbo=1
 # Number of trials
 ntrials=1
 
+
 #########
 ## Run ##
 #########
@@ -62,7 +63,7 @@ ntrials=1
 for j in $(seq 1 $ntrials); do
 	outfile="$output_folder/model_$j.hdf5"
 	cmd="../run.py --input_folder $input_folder --outfile $outfile --factors $factors --iterations $maxiter --convergence_mode $convergence_mode --start_elbo $start_elbo --elbo_freq $elbofreq --seed $j"
-	# gpujob 15 1 research-rh7 $cmd
-	jobid=$(sbatch -p gpu --gres gpu:1 --exclude=gpu8,gpu9 $cmd | awk '{print $NF}')
+	job 15 1 research-rh7 $cmd
+	# jobid=$(sbatch -p gpu --gres gpu:1 --exclude=gpu8,gpu9 $cmd | awk '{print $NF}')
 	# eval $cmd
 done
