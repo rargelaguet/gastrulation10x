@@ -21,6 +21,11 @@ suppressPackageStartupMessages(library(MOFA2))
 io <- list()
 io$basedir <- "/Users/ricard/data/gastrulation10x_mofa"
 io$sample.metadata <- paste0(io$basedir,"/sample_metadata.txt.gz")
+io$pdfdir <- paste0(io$basedir,"/pdf")
+```
+
+```{r}
+source("/Users/ricard/gastrulation10x/mofa/load_settings.R")
 ```
 
 <!-- Load sample metadata -->
@@ -52,28 +57,37 @@ sample_metadata_filt %>% .[,group:=paste(stage,sample,sep="_")] %>% .[,sample:=N
 sample_metadata_filt %>% setnames("cell","sample")
 
 # Add sample metadata to the MOFA object
-model@samples_metadata <- sample_metadata_filt
+samples_metadata(model) <- sample_metadata_filt
 ```
-
 <!-- Rename groups -->
 
 ```{r}
-groups(model) <- c("E6.5 (1)", "E6.5 (2)", "E7.0 (1)", "E7.0 (2)", "E7.25 (1)", "E7.25 (2)")
+rename.groups <- c(
+  "E6.5_1" = "E6.5 (1)", 
+  "E6.5_5" = "E6.5 (2)", 
+  "E7.0_10" = "E7.0 (1)", 
+  "E7.0_14" = "E7.0 (2)", 
+  "E7.25_26" = "E7.25 (1)", 
+  "E7.25_27" = "E7.25 (2)"
+)
+groups(model) <- unname(rename.groups)
+
+# sample_metadata[,sample:=stringr::str_replace_all(sample,rename.groups)]
 ```
 
 <!-- Subset factors -->
 
 ```{r}
-# r2 <- model@cache$variance_explained$r2_per_factor
-# factors <- sapply(r2, function(x) x[,"RNA"]>0.001)
-# model <- subset_factors(model, which(apply(factors,1,sum) >= 1))
-# factors(model) <- paste("Factor",1:get_dimensions(model)[["K"]], sep=" ")
+r2 <- model@cache$variance_explained$r2_per_factor
+factors <- sapply(r2, function(x) x[,"RNA"]>0.01)
+model <- subset_factors(model, which(apply(factors,1,sum) >= 1))
+factors(model) <- paste("Factor",1:get_dimensions(model)[["K"]], sep=" ")
 ```
 
 <!-- Plot factors correlation -->
 
 ```{r}
-# pdf(paste0(io$pdfdir,"/factor_correlation.pdf"), width=6, height=6)
+# pdf(paste0(io$pdfdir,"/factor_correlation.pdf"), width=6, height=6, useDingbats = F)
 # plot_factor_cor(model)
 # dev.off()
 ```

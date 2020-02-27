@@ -4,17 +4,17 @@
 
 io <- list()
 if (grepl("ricard",Sys.info()['nodename'])) {
-  io$basedir <- "/Users/ricard/data/gastrulation10x"
+  io$basedir <- "/Users/ricard/data/gastrulation10x_mofa"
   io$gene.metadata <- "/Users/ricard/data/ensembl/mouse/v87/BioMart/mRNA/Mmusculus_genes_BioMart.87.txt"
 } else if (grepl("ebi",Sys.info()['nodename'])) {
-  io$basedir <- "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x"
+  io$basedir <- "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x_mofa"
   io$gene.metadata <- "/hps/nobackup2/research/stegle/users/ricard/ensembl/mouse/v87/BioMart/mRNA/Mmusculus_genes_BioMart.87.txt"
 } else {
 	stop("Computer not recognised")
 }
 
 io$pdfdir <- paste0(io$basedir,"/mofa/pdf")
-io$sample.metadata <- paste0(io$basedir,"/sample_metadata2.txt")
+io$sample.metadata <- paste0(io$basedir,"/sample_metadata.txt.gz")
 
 ####################
 ## Define options ##
