@@ -74,8 +74,8 @@ samples_names = [ x.index for x in data[0] ]
 ent.set_data_matrix(data, views_names=["RNA"], groups_names=sample_groups, samples_names=samples_names, features_names=features_names)
 
 # Set model options
-# NOTE: WE USED ARD_W=TRUE and SW=TRUE FOR THE FIRST SUBMISSION
-ent.set_model_options(factors=args.factors, spikeslab_factors=False, spikeslab_weights=True)
+# ent.set_model_options(factors=args.factors, spikeslab_factors=False, spikeslab_weights=True) # original
+ent.set_model_options(factors=args.factors, spikeslab_factors=False, spikeslab_weights=False)
 
 # Set training options
 ent.set_train_options(iter=args.iterations, convergence_mode=args.convergence_mode, startELBO=args.start_elbo, freqELBO=args.elbo_freq, verbose=args.verbose, seed=args.seed)

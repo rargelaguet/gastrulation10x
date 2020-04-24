@@ -34,7 +34,7 @@ fi
 ###################
 
 # Nomber of factors
-num_factors=15
+num_factors=10
 
 #######################
 ## Training settings ##

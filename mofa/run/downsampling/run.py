@@ -64,6 +64,8 @@ if args.downsampling_fraction>0.00:
 
 		N = data[0][g].shape[0]
 		idx_to_mask = np.random.choice(N, size=round(args.downsampling_fraction * N), replace = False)
+
+		# (TO-DO) Instead of NA we should remove it from the training data
 		data[0][g].iloc[idx_to_mask,:] = pd.np.nan
 
 
@@ -80,7 +82,7 @@ samples_names = [ x.index for x in data[0] ]
 ent.set_data_matrix(data, views_names=["RNA"], groups_names=sample_groups, samples_names=samples_names, features_names=features_names)
 
 # Set model options
-ent.set_model_options(factors=args.factors, spikeslab_factors=False, spikeslab_weights=True)
+ent.set_model_options(factors=args.factors, spikeslab_factors=False, spikeslab_weights=False)
 
 # Set training options
 ent.set_train_options(iter=args.iterations, convergence_mode=args.convergence_mode, startELBO=args.start_elbo, freqELBO=args.elbo_freq, verbose=args.verbose, seed=args.seed)
@@ -99,4 +101,4 @@ ent.run()
 ## Save the model ##
 ####################
 
-ent.save(args.outfile, save_data=True)
+ent.save(args.outfile, save_data=False)
