@@ -1,0 +1,96 @@
+---
+title: "Find marker genes"
+---
+  
+```{r load_modules, echo=FALSE, include=FALSE}
+library(scater)
+library(scran)
+library(ggplot2)
+library(ggpubr)
+# library(RColorBrewer)
+# library(umap)
+```
+
+# Define settings
+
+Define I/O
+```{r define_io, echo=FALSE}
+# Load default settings
+source("/Users/ricard/gastrulation10x/settings.R")
+
+io$outdir <- paste0(io$basedir,"/results/marker_genes")
+```
+
+Define options
+```{r}
+
+```
+
+# Load data
+
+Load RNA expression data
+```{r load_data, echo=FALSE}
+sce <- readRDS(io$rna.sce)[,cell_metadata$cell]
+sce$group <- cell_metadata$celltype
+```
+
+
+# Find marker genes
+
+```{r}
+diff <- findMarkers(sce, sce$group, pval.type="all", test.type="t")
+saveRDS(diff, paste0(io$outdir,"/diff.rds"))
+```
+
+# Filter results
+
+Options
+```{r}
+# This looks conservative, but it is not. t-test are very liberal
+opts$fdr <- 1e-20
+
+# Minimum fraction of cells that must express the gene (within each cell type)
+opts$min.expr <- 0.30
+```
+
+Calculate detection rate per group and gene
+```{r}
+avgexpr.dt <- unique(sce$group) %>% map(function(i) {
+
+  dt <- logcounts(sce[,sce$group==i]) %>% as.matrix %>% as.data.table(keep.rownames = T) %>%
+    melt(id.vars="rn") %>% setnames(c("gene","cell","value")) %>%
+    # .[,.(expr=mean(value)),by="gene"] %>%
+    .[,.(expr=mean(value>0)),by="gene"] %>%
+    .[,group:=i]
+  return(dt)
+
+}) %>% rbindlist
+```
+
+Do the filterng
+```{r}
+diff_filt <- list()
+for (i in names(diff)) {
+  
+  diff_filt[[i]] <- diff[[i]] %>% 
+    as.data.table(keep.rownames = T) %>%
+    setnames("rn","gene") %>%
+    .[,group:=i] %>%
+    
+    # Filter by FDR
+    .[FDR<=opts$fdr] %>% .[,p.value:=NULL] %>%
+    .[,c("group","gene","FDR")] %>%
+  
+    # Filter by mean expression
+    merge(avgexpr.dt,by=c("group","gene")) %>%
+      .[expr>=opts$min.expr] %>%
+    setorder(FDR)
+}
+diff_filt <- rbindlist(diff_filt)
+```
+
+# Save
+
+```{r}
+fwrite(diff_filt, io$outfile, quote=F, sep="\t")
+```

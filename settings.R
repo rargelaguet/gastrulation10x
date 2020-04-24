@@ -5,8 +5,6 @@ suppressPackageStartupMessages(library(ggplot2))
 #########
 ## I/O ##
 #########
-/Users/ricard/data/
-
 
 io <- list()
 if (grepl("ricard",Sys.info()['nodename'])) {
@@ -19,7 +17,7 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 }
 
 io$metadata <- paste0(io$basedir,"/sample_metadata.txt.gz")
-io$rna.sce <- paste0(io$basedir,"/SingleCellExperiment.rds")
+io$rna.sce <- paste0(io$basedir,"/processed/SingleCellExperiment.rds")
 
 #############
 ## Options ##
@@ -71,6 +69,6 @@ opts$colors1 = c(
 ## Load sample metadata ##
 ##########################
 
-sample_metadata <- fread(io$metadata) 
-  
+sample_metadata <- fread(io$metadata)  %>%
+  .[stripped==F & doublet==F]
   
