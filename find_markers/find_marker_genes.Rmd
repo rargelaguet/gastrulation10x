@@ -42,20 +42,40 @@ sce <- readRDS(io$rna.sce)[,sample_metadata$cell]
 sce$group <- sample_metadata$celltype
 ```
 
-USE MERGED LINEAGES
-
+Load gene metadata
 ```{r}
 gene_metadata <- fread(io$gene_metadata)
 # table(rownames(sce) %in% gene_metadata$ens_id)
 ```
 
 
-
 # Find marker genes
 
 ```{r}
 diff <- findMarkers(sce, sce$group, pval.type="all", test.type="t")
-saveRDS(diff, paste0(io$outdir,"/diff.rds"))
+# saveRDS(diff, paste0(io$outdir,"/diff.rds"))
+```
+
+Calculate average gene expression and detection rate per group
+```{r}
+expr.dt <- unique(sce$group) %>% map(function(i) {
+  dt <- logcounts(sce[,sce$group==i]) %>% as.matrix %>% as.data.table(keep.rownames = T) %>%
+    melt(id.vars="rn") %>% setnames(c("ens_id","cell","value")) %>%
+    .[,.(mean_expr=round(mean(value),3), detection_rate=round(mean(value>0),3)),by="ens_id"] %>%
+    .[,group:=i]
+  return(dt)
+}) %>% rbindlist
+```
+
+Save
+```{r}
+# to.save <- expr.dt %>% 
+#   merge(gene_metadata[,c("symbol","ens_id")], all.x=T) %>%
+#   setnames("symbol","gene")
+# 
+# fwrite(to.save, paste0(io$outdir,"/avg_expr_per_celltype_and_gene.txt.gz"), sep="\t")
+# 
+# rm(to.save)
 ```
 
 Calculate logFC direction
@@ -83,18 +103,6 @@ opts$min.expr <- 0.30
 # if FALSE, keep also marker genes that are downregulated in the corresponding lineage
 opts$keep_only_upregulated <- TRUE
 ```
-
-Calculate detection rate per group and gene
-```{r}
-expr.dt <- unique(sce$group) %>% map(function(i) {
-  dt <- logcounts(sce[,sce$group==i]) %>% as.matrix %>% as.data.table(keep.rownames = T) %>%
-    melt(id.vars="rn") %>% setnames(c("ens_id","cell","value")) %>%
-    .[,.(mean_expr=mean(value), detection_rate=mean(value>0)),by="ens_id"] %>%
-    .[,group:=i]
-  return(dt)
-}) %>% rbindlist
-```
-
 
 Do the filterng
 ```{r, message=F}

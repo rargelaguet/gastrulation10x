@@ -3,13 +3,11 @@ title: "Plot marker genes"
 ---
   
 ```{r load_modules, echo=FALSE, include=FALSE}
-library(scater)
 library(scran)
-library(ggplot2)
 library(ggpubr)
-# library(RColorBrewer)
-# library(umap)
 ```
+
+# Define settings
 
 Define I/O
 ```{r define_io, echo=FALSE}
@@ -23,73 +21,68 @@ Define options
 
 ```
 
+# Load data 
+
 Load RNA expression data
 ```{r load_data, echo=FALSE}
-sce <- readRDS(io$rna.healthy.sce)[,cell_metadata$cell]
-sce$group <- cell_metadata$group
+sce <- readRDS(io$rna.healthy.sce)[,sample_metadata$cell]
+sce$group <- sample_metadata$celltype
 ```
 
 Load pre-computed marker genes
 ```{r}
-marker_genes.dt <- fread(io$rna.markers)
+marker_genes.dt <- fread(io$marker_genes)
 marker.genes <- marker_genes.dt$gene
-
-marker.genes <- sce@metadata$variableGenes
 ```
 
-Calculate average expression per cluster and gene
-
+Load average expression per cluster and gene
 ```{r}
-dt <- unique(cell_metadata$group) %>% map(function(i) {
-  
-  sce_filt <- sce[marker.genes,sce$group==i]
-  
-  dt <- logcounts(sce_filt) %>% as.matrix %>% as.data.table(keep.rownames = T) %>% 
-    melt(id.vars="rn") %>% setnames(c("gene","cell","value")) %>%
-    .[,group:=i] %>%
-    .[,.(expr=mean(value)),by=c("group","gene")]
-  
-  return(dt)
-
-}) %>% rbindlist
+avgexpr.dt <- fread(io$average_expression_per_celltype)
 ```
+
+# Plot
 
 Plot top N genes with highest expression levels
-
 ```{r}
-# opts$top_genes <- 50
-# 
-# for (i in unique(cell_metadata$group)) {
-# 
-#   dt.filt <- dt[group==i] %>% 
-#     setorder(-expr) %>% head(opts$top_genes) %>%
-#     .[,gene:=factor(gene,levels=rev(gene))]
-#   
-#   p <- ggbarplot(dt.filt, x="gene", y="expr", fill="#3CB54E", color="black") +
-#     coord_flip() +
-#     labs(x="RNA expression",y="") +
-#     theme(
-#       axis.text.y = element_text(size=rel(0.8))
-#     )
-#   
-#   pdf(sprintf("%s/%s_lineplot.pdf",io$outdir,i), width = 6, height = 8)
-#   print(p)
-#   dev.off()
-# }
+opts$top_genes <- 50
+
+for (i in unique(sample_metadata$group)) {
+
+  dt.filt <- avgexpr.dt[group==i] %>%
+    setorder(-expr) %>% head(opts$top_genes) %>%
+    .[,gene:=factor(gene,levels=rev(gene))]
+
+  p <- ggbarplot(dt.filt, x="gene", y="expr", fill="#3CB54E", color="black") +
+    coord_flip() +
+    labs(x="RNA expression",y="") +
+    theme(
+      axis.text.y = element_text(size=rel(0.8))
+    )
+
+  pdf(sprintf("%s/%s_top_genes.pdf",io$outdir,i), width = 6, height = 8)
+  print(p)
+  dev.off()
+}
 ```
 
 Plot precomputed marker genes per cluster
 
 ```{r}
-for (i in unique(cell_metadata$group)) {
+opts$scale <- TRUE
+
+for (i in unique(sample_metadata$group)) {
 
   genes <- marker_genes.dt[group==i,gene]
   
-  to.plot <- dt[gene%in%genes] %>% 
+  to.plot <- avgexpr.dt[gene%in%genes] %>% 
     .[,gene:=factor(gene,levels=genes)] %>% 
-    .[,scaled_expr:=expr/max(expr),by="gene"] # Scale expression
+    
+   # Scale expression by gene
+  if (isTRUE(opts$scale)) {
+    to.plot %>% .[,expr:=expr/max(expr),by="gene"]
+  }
   
-  p <- ggplot(to.plot, aes_string(x="group", y="gene", fill="scaled_expr")) +
+  p <- ggplot(to.plot, aes_string(x="group", y="gene", fill="expr")) +
     geom_tile() +
     labs(x="",y="") +
     theme_classic() +
@@ -100,7 +93,7 @@ for (i in unique(cell_metadata$group)) {
       axis.text.x = element_text(color="black", angle=90, hjust=1, size=rel(1.0), vjust=0.5)
     )
   
-  pdf(sprintf("%s/%s_heatmap.pdf",io$outdir,i), width = 6, height = 8)
+  pdf(sprintf("%s/%s_heatmap_marker_genes.pdf",io$outdir,i), width = 6, height = 8)
   print(p)
   dev.off()
 }

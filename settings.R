@@ -17,6 +17,8 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 }
 
 io$metadata <- paste0(io$basedir,"/sample_metadata.txt.gz")
+io$marker_genes <- paste0(io$basedir,"/results/marker_genes/marker_genes.tsv.gz")
+io$average_expression_per_celltype <- paste0(io$basedir,"/results/marker_genes/avg_expr_per_celltype_and_gene.txt.gz")
 io$rna.sce <- paste0(io$basedir,"/processed/SingleCellExperiment.rds")
 
 #############
