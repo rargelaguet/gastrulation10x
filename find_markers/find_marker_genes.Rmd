@@ -97,7 +97,7 @@ Options
 opts$fdr <- 1e-20
 
 # Minimum fraction of cells that must express the gene (within each cell type)
-opts$min.expr <- 0.30
+opts$min.detection_rate <- 0.30
 
 # If TRUE, keep only gene markers that are upregulated in the corresponding lineage when compared to all other lineages
 # if FALSE, keep also marker genes that are downregulated in the corresponding lineage
@@ -120,7 +120,7 @@ for (i in names(diff)) {
   
     # Filter by mean expression
     merge(expr.dt,by=c("group","ens_id")) %>%
-    .[detection_rate>=opts$min.expr] %>%
+    .[detection_rate>=opts$min.detection_rate] %>%
   
     # Filter by logFC direction
     merge(logfc_direction.dt,by=c("group","ens_id"))
