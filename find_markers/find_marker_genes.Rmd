@@ -1,7 +1,7 @@
 ---
 title: "Find marker genes"
 ---
-  
+
 ```{r load_modules, echo=FALSE, include=FALSE}
 library(scater)
 library(scran)
@@ -9,6 +9,14 @@ library(ggplot2)
 library(ggpubr)
 # library(RColorBrewer)
 # library(umap)
+```
+
+```{r}
+matrix.please <- function(x) {
+  m<-as.matrix(x[,-1])
+  rownames(m)<-x[[1]]
+  m
+}
 ```
 
 # Define settings
@@ -30,9 +38,17 @@ Define options
 
 Load RNA expression data
 ```{r load_data, echo=FALSE}
-sce <- readRDS(io$rna.sce)[,cell_metadata$cell]
-sce$group <- cell_metadata$celltype
+sce <- readRDS(io$rna.sce)[,sample_metadata$cell]
+sce$group <- sample_metadata$celltype
 ```
+
+USE MERGED LINEAGES
+
+```{r}
+gene_metadata <- fread(io$gene_metadata)
+# table(rownames(sce) %in% gene_metadata$ens_id)
+```
+
 
 
 # Find marker genes
@@ -40,6 +56,17 @@ sce$group <- cell_metadata$celltype
 ```{r}
 diff <- findMarkers(sce, sce$group, pval.type="all", test.type="t")
 saveRDS(diff, paste0(io$outdir,"/diff.rds"))
+```
+
+Calculate logFC direction
+```{r}
+logfc_direction.dt <- names(diff) %>% map(function(i) {
+  diff[[i]] %>% as.data.table(keep.rownames = T) %>% setnames("rn","ens_id") %>%
+    .[,c("p.value","FDR"):=NULL] %>%
+    melt(id.vars="ens_id") %>%
+    .[,.(sign=c("-","+")[(mean(value>0)>0.5)+1]),by="ens_id"] %>%
+    .[,group:=i]
+}) %>% rbindlist
 ```
 
 # Filter results
@@ -51,46 +78,59 @@ opts$fdr <- 1e-20
 
 # Minimum fraction of cells that must express the gene (within each cell type)
 opts$min.expr <- 0.30
+
+# If TRUE, keep only gene markers that are upregulated in the corresponding lineage when compared to all other lineages
+# if FALSE, keep also marker genes that are downregulated in the corresponding lineage
+opts$keep_only_upregulated <- TRUE
 ```
 
 Calculate detection rate per group and gene
 ```{r}
-avgexpr.dt <- unique(sce$group) %>% map(function(i) {
-
+expr.dt <- unique(sce$group) %>% map(function(i) {
   dt <- logcounts(sce[,sce$group==i]) %>% as.matrix %>% as.data.table(keep.rownames = T) %>%
-    melt(id.vars="rn") %>% setnames(c("gene","cell","value")) %>%
-    # .[,.(expr=mean(value)),by="gene"] %>%
-    .[,.(expr=mean(value>0)),by="gene"] %>%
+    melt(id.vars="rn") %>% setnames(c("ens_id","cell","value")) %>%
+    .[,.(mean_expr=mean(value), detection_rate=mean(value>0)),by="ens_id"] %>%
     .[,group:=i]
   return(dt)
-
 }) %>% rbindlist
 ```
 
+
 Do the filterng
-```{r}
+```{r, message=F}
 diff_filt <- list()
 for (i in names(diff)) {
   
   diff_filt[[i]] <- diff[[i]] %>% 
     as.data.table(keep.rownames = T) %>%
-    setnames("rn","gene") %>%
+    setnames("rn","ens_id") %>%
     .[,group:=i] %>%
     
     # Filter by FDR
     .[FDR<=opts$fdr] %>% .[,p.value:=NULL] %>%
-    .[,c("group","gene","FDR")] %>%
+    .[,c("group","ens_id","FDR")] %>%
   
     # Filter by mean expression
-    merge(avgexpr.dt,by=c("group","gene")) %>%
-      .[expr>=opts$min.expr] %>%
-    setorder(FDR)
+    merge(expr.dt,by=c("group","ens_id")) %>%
+    .[detection_rate>=opts$min.expr] %>%
+  
+    # Filter by logFC direction
+    merge(logfc_direction.dt,by=c("group","ens_id"))
+    if (isTRUE(opts$keep_only_upregulated)) {
+      diff_filt[[i]] <- diff_filt[[i]][sign=="+"] %>% .[,sign:=NULL]
+    }
+  
+    # Sort genes by FDR
+    diff_filt[[i]] %>% setorder(FDR,mean_expr) 
 }
-diff_filt <- rbindlist(diff_filt)
+diff_filt <- rbindlist(diff_filt) %>% 
+  merge(gene_metadata[,c("symbol","ens_id")], all.x=T) %>%
+  setnames("symbol","gene")
 ```
+
 
 # Save
 
 ```{r}
-fwrite(diff_filt, io$outfile, quote=F, sep="\t")
+fwrite(diff_filt, paste0(io$outdir,"/marker_genes.tsv.gz"), quote=F, sep="\t")
 ```
