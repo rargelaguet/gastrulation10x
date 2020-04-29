@@ -17,7 +17,8 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 }
 
 io$metadata <- paste0(io$basedir,"/sample_metadata.txt.gz")
-io$marker_genes <- paste0(io$basedir,"/results/marker_genes/marker_genes.tsv.gz")
+io$marker_genes.stringent <- paste0(io$basedir,"/results/marker_genes/marker_genes_stringent.tsv.gz")
+io$marker_genes.lenient <- paste0(io$basedir,"/results/marker_genes/marker_genes_lenient.tsv.gz")
 io$average_expression_per_celltype <- paste0(io$basedir,"/results/marker_genes/avg_expr_per_celltype_and_gene.txt.gz")
 io$rna.sce <- paste0(io$basedir,"/processed/SingleCellExperiment.rds")
 
@@ -27,7 +28,7 @@ io$rna.sce <- paste0(io$basedir,"/processed/SingleCellExperiment.rds")
 
 opts <- list()
 
-opts$colors1 = c(
+opts$celltype.colors.1 = c(
 	"Epiblast" = "#635547",
 	"Primitive Streak" = "#DABE99",
 	"Caudal epiblast" = "#9e6762",
@@ -58,7 +59,7 @@ opts$colors1 = c(
 	"Rostral neurectoderm" = "#65A83E",
 	"Caudal neurectoderm" = "#354E23",
 	"Neural crest" = "#C3C388",
-	"Forebrain/Midbrain/Hindbrain" = "#647a4f",
+	"Forebrain_Midbrain_Hindbrain" = "#647a4f",
 	"Spinal cord" = "#CDE088",
 	"Surface ectoderm" = "#f7f79e",
 	"Visceral endoderm" = "#F6BFCB",
@@ -67,10 +68,55 @@ opts$colors1 = c(
 	"Parietal endoderm" = "#1A1A1A"
 )
 
+opts$celltype.colors.2 = c(
+	"Epiblast" = "#635547",
+	"Primitive Streak" = "#DABE99",
+	"Caudal epiblast" = "#9e6762",
+	"PGC" = "#FACB12",
+	"Anterior Primitive Streak" = "#c19f70",
+	"Notochord" = "#0F4A9C",
+	"Def. endoderm" = "#F397C0",
+	"Gut" = "#EF5A9D",
+	"Nascent mesoderm" = "#C594BF",
+	"Mixed mesoderm" = "#DFCDE4",
+	# "Intermediate mesoderm" = "#139992",
+	"Caudal Mesoderm" = "#3F84AA",
+	"Paraxial mesoderm" = "#8DB5CE",
+	"Somitic mesoderm" = "#005579",
+	"Pharyngeal mesoderm" = "#C9EBFB",
+	"Cardiomyocytes" = "#B51D8D",
+	"Allantois" = "#532C8A",
+	"ExE mesoderm" = "#8870ad",
+	"Mesenchyme" = "#cc7818",
+	"Haematoendothelial progenitors" = "#FBBE92",
+	"Endothelium" = "#ff891c",
+	# "Blood progenitors 1" = "#f9decf",
+	# "Blood progenitors 2" = "#c9a997",
+	"Blood progenitors" = "#c9a997",
+	# "Erythroid1" = "#C72228",
+	# "Erythroid2" = "#f79083",
+	# "Erythroid3" = "#EF4E22",
+	"Erythroid" = "#EF4E22",
+	"NMP" = "#8EC792",
+	# "Rostral neurectoderm" = "#65A83E",
+	# "Caudal neurectoderm" = "#354E23",
+	"Neurectoderm" = "#65A83E",
+	"Neural crest" = "#C3C388",
+	"Forebrain_Midbrain_Hindbrain" = "#647a4f",
+	"Spinal cord" = "#CDE088",
+	"Surface ectoderm" = "#f7f79e",
+	"Visceral endoderm" = "#F6BFCB",
+	"ExE endoderm" = "#7F6874",
+	"ExE ectoderm" = "#989898",
+	"Parietal endoderm" = "#1A1A1A"
+)
+
+
+
 ##########################
 ## Load sample metadata ##
 ##########################
 
-sample_metadata <- fread(io$metadata)  %>%
+sample_metadata <- fread(io$metadata) %>%
   .[stripped==F & doublet==F]
   

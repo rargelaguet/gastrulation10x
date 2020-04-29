@@ -1,0 +1,163 @@
+---
+title: "cellassign"
+---
+
+```{r}
+library(reticulate)
+use_python("/Users/ricard/anaconda3/envs/gpflow_v2/bin/python", required = T)
+py_config()
+```
+
+```{r load_modules, echo=FALSE, include=FALSE}
+library(SingleCellExperiment)
+# library(scater)
+# library(scran)
+library(tensorflow)
+library(cellassign)
+```
+
+
+# Define settings
+
+Define I/O
+```{r define_io, echo=FALSE}
+# Load default settings
+source("/Users/ricard/gastrulation10x/settings.R")
+
+io$outdir <- paste0(io$basedir,"/results/cellassign")
+```
+
+Define options
+```{r}
+opts$test <- TRUE
+
+opts$groups <- c(
+  "Epiblast",
+  "Primitive Streak",
+  "ExE ectoderm",
+  "Visceral endoderm",
+  "ExE endoderm",
+  "Nascent mesoderm",
+  "Neurectoderm",
+  "Blood progenitors",
+  "Mixed mesoderm",
+  "ExE mesoderm",
+  "Pharyngeal mesoderm",
+  "Caudal epiblast",
+  "PGC",
+  "Mesenchyme",
+  "Haematoendothelial progenitors",
+  "Surface ectoderm",
+  "Gut",
+  "Paraxial mesoderm",
+  "Notochord",
+  "Somitic mesoderm",
+  "Caudal Mesoderm",
+  "Erythroid",
+  "Def. endoderm",
+  "Parietal endoderm",
+  "Allantois",
+  "Anterior Primitive Streak",
+  "Endothelium",
+  "Forebrain_Midbrain_Hindbrain",
+  "Spinal cord",
+  "Cardiomyocytes",
+  "NMP",
+  "Neural crest"
+)
+```
+
+Update metadata
+```{r}
+sample_metadata %>% 
+  setnames("celltype2","group")
+```
+
+# Load data
+
+```{r}
+if (isTRUE(opts$test)) {
+  print("Testing mode, subsetting cells...")
+  opts$groups <- head(opts$groups,n=3)
+  sample_metadata <- sample_metadata %>% 
+    .[group%in%opts$groups] %>% split(.,.$group) %>% 
+    map(~ head(.,n=100)) %>% rbindlist
+}
+table(sample_metadata$group)
+```
+
+
+Load RNA expression data
+```{r load_data, echo=FALSE}
+sce <- readRDS(io$rna.sce)[,sample_metadata$cell]
+sce$group <- sample_metadata$group
+```
+
+Load marker genes
+```{r}
+marker_genes.dt <- fread(io$marker_genes.lenient) %>%
+  .[group%in%opts$groups]
+```
+
+# cellassign
+
+Create binary membership matrix
+
+```{r}
+marker_gene_list <- split(marker_genes.dt, by="group") %>% map(~ .$ens_id)
+bmat <- marker_list_to_mat(marker_gene_list)
+```
+
+Subset SingleCellExperiment
+```{r}
+sce <- sce[rownames(bmat),]
+```
+
+Extract size factors
+```{r}
+s <- sizeFactors(sce)
+```
+
+Covariate matrix (TO-DO: ADD BATCH INFORMATION)
+```{r}
+
+```
+
+
+Run
+```{r}
+fit <- cellassign(sce, 
+  marker_gene_info = bmat, 
+  min_delta = 1,
+  # X = X,
+  s = s, 
+  # learning_rate = 1e-2, 
+  shrinkage = TRUE,
+  verbose = FALSE
+)
+
+print(fit)
+```
+
+```{r}
+celltypes(fit, assign_prob = 0.95)
+```
+
+By default, this assigns a cell to a type of the probability of assignment is greater than 0.95, and "unassigned" otherwise. This can be changed with the `assign_prob` parameter.
+```{r}
+
+```
+
+
+```{r}
+print(str(mleparams(fit)))
+```
+
+
+```{r}
+pheatmap::pheatmap(cellprobs(fit))
+```
+
+```{r}
+print(table(sce$group, celltypes(fit)))
+```

@@ -58,7 +58,7 @@ opts$colors = c(
 	"Rostral neurectoderm" = "#65A83E",
 	"Caudal neurectoderm" = "#354E23",
 	"Neural crest" = "#C3C388",
-	"Forebrain/Midbrain/Hindbrain" = "#647a4f",
+	"Forebrain_Midbrain_Hindbrain" = "#647a4f",
 	"Spinal cord" = "#CDE088",
 	
 	"Surface ectoderm" = "#f7f79e",
