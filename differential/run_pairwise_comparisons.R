@@ -18,66 +18,8 @@ io$outdir <- paste0(io$basedir,"/results/differential"); dir.create(io$outdir, s
 ## Options ##
 #############
 
-opts <- list()
-
 # Define cell types
-# opts$groups <- c(
-#   "Epiblast",
-#   "Primitive_Streak",
-#   "ExE_ectoderm",
-#   "Visceral_endoderm",
-#   "ExE_endoderm",
-#   "Nascent_mesoderm",
-#   "Neurectoderm",
-#   "Blood_progenitors",
-#   "Mixed_mesoderm",
-#   "ExE_mesoderm",
-#   "Pharyngeal_mesoderm",
-#   "Caudal_epiblast",
-#   "PGC",
-#   "Mesenchyme",
-#   "Haematoendothelial_progenitors",
-#   "Surface_ectoderm",
-#   "Gut",
-#   "Paraxial_mesoderm",
-#   "Notochord",
-#   "Somitic_mesoderm",
-#   "Caudal_Mesoderm",
-#   "Erythroid",
-#   "Def._endoderm",
-#   "Parietal_endoderm",
-#   "Allantois",
-#   "Anterior_Primitive_Streak",
-#   "Endothelium",
-#   "Forebrain_Midbrain_Hindbrain",
-#   "Spinal_cord",
-#   "Cardiomyocytes",
-#   "NMP",
-#   "Neural_crest"
-# )# %>% stringr::str_replace_all(.," ","-")
-
-opts$groups <- c(
-  "Epiblast-PS",
-  "ExE_ectoderm",
-  "ExE_endoderm",
-  "Nascent_mesoderm",
-  "Neuroectoderm",
-  "Blood_progenitors",
-  "Mesoderm",
-  "ExE_mesoderm",
-  "Caudal_epiblast",
-  "PGC",
-  "Mesenchyme",
-  "Surface_ectoderm",
-  "Endoderm",
-  "Notochord",
-  "Erythroid",
-  "Parietal_endoderm",
-  "Endothelium",
-  "Spinal_cord",
-  "Cardiomyocytes",
-  "NMP"
-)
+opts$groups <- opts$celltypes.1
 
 # Statistical test
 # opts$test <- c("edgeR","t-test")

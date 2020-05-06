@@ -70,7 +70,7 @@ opts$min_detection_rate_per_group <- 0.40
 # Update cell metadata
 sample_metadata <- sample_metadata %>%
   .[celltype3%in%opts$groups] %>%
-  setnames("celltype3","group") %>%
+  setnames("celltype","group") %>%
   .[,c("cell","group")]
 
 # Sort cells so that groupA comes before groupB
