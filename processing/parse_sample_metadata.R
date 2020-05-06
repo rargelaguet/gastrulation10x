@@ -15,8 +15,8 @@ source("/Users/ricard/gastrulation10x/settings.R")
 # )
 
 to.merge <- c(
-  "Epiblast" = "Epiblast/PS",
-  "Primitive_Streak" = "Epiblast/PS",
+  "Epiblast" = "Epiblast-PS",
+  "Primitive_Streak" = "Epiblast-PS",
   "ExE_ectoderm" = "ExE_ectoderm",
   "Visceral_endoderm" = "ExE_endoderm",
   "ExE_endoderm" = "ExE_endoderm",
@@ -40,7 +40,7 @@ to.merge <- c(
   "Def._endoderm" = "Endoderm",
   "Parietal_endoderm" = "Parietal_endoderm",
   "Allantois" = "ExE_mesoderm",
-  "Anterior_Primitive_Streak" = "Epiblast/PS",
+  "Anterior_Primitive_Streak" = "Epiblast-PS",
   "Endothelium" = "Endothelium",
   "Forebrain_Midbrain_Hindbrain" = "Neuroectoderm",
   "Spinal_cord" = "Spinal_cord",

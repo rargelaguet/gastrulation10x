@@ -113,7 +113,68 @@ opts$celltype.colors.2 = c(
 )
 
 
+opts$celltypes.1 = c(
+	"Epiblast",
+	"Primitive_Streak",
+	"Caudal_epiblast",
+	"PGC",
+	"Anterior_Primitive_Streak",
+	"Notochord",
+	"Def._endoderm",
+	"Gut",
+	"Nascent_mesoderm",
+	"Mixed_mesoderm",
+	"Intermediate_mesoderm",
+	"Caudal_Mesoderm",
+	"Paraxial_mesoderm",
+	"Somitic_mesoderm",
+	"Pharyngeal_mesoderm",
+	"Cardiomyocytes",
+	"Allantois",
+	"ExE_mesoderm",
+	"Mesenchyme",
+	"Haematoendothelial_progenitors",
+	"Endothelium",
+	"Blood_progenitors_1",
+	"Blood_progenitors_2",
+	"Erythroid1",
+	"Erythroid2",
+	"Erythroid3",
+	"NMP",
+	"Rostral_neurectoderm",
+	"Caudal_neurectoderm",
+	"Neural_crest",
+	"Forebrain_Midbrain_Hindbrain",
+	"Spinal_cord",
+	"Surface_ectoderm",
+	"Visceral_endoderm",
+	"ExE_endoderm",
+	"ExE_ectoderm",
+	"Parietal_endoderm"
+)
 
+opts$celltypes.3 <- c(
+  "Epiblast/PS",
+  "ExE_ectoderm",
+  "ExE_endoderm",
+  "Nascent_mesoderm",
+  "Neuroectoderm",
+  "Blood_progenitors",
+  "Mesoderm",
+  "ExE_mesoderm",
+  "Caudal_epiblast",
+  "PGC",
+  "Mesenchyme",
+  "Surface_ectoderm",
+  "Endoderm",
+  "Notochord",
+  "Erythroid",
+  "Parietal_endoderm",
+  "Endothelium",
+  "Spinal_cord",
+  "Cardiomyocytes",
+  "NMP"
+)
 ##########################
 ## Load sample metadata ##
 ##########################

@@ -20,8 +20,8 @@ args <- p$parse_args(commandArgs(TRUE))
 stopifnot(args$test%in%c("edgeR","t-test","wilcoxon"))
 
 ## START TEST
-# args$groupA <- c("ExE_endoderm")
-# args$groupB <- c("Epiblast")
+# args$groupA <- c("ExE_ectoderm")
+# args$groupB <- c("Cardiomyocytes")
 # args$outfile <- c("/Users/ricard/data/gastrulation10x/results/differential/foo.tsv.gz")
 # # args$outfile <- c("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/results/differential/foo.tsv.gz")
 # args$test_mode <- TRUE
@@ -47,8 +47,8 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 #############
 
 # Define groups
-args$groupA <- args$groupA # %>% stringr::str_replace_all(.,"-"," ")
-args$groupB <- args$groupB # %>% stringr::str_replace_all(.,"-"," ")
+# args$groupA <- args$groupA # %>% stringr::str_replace_all(.,"-"," ")
+# args$groupB <- args$groupB # %>% stringr::str_replace_all(.,"-"," ")
 opts$groups <- c(args$groupA,args$groupB)
 
 # Define FDR threshold
@@ -73,9 +73,12 @@ sample_metadata <- sample_metadata %>%
   setnames("celltype3","group") %>%
   .[,c("cell","group")]
 
+# Sort cells so that groupA comes before groupB
+sample_metadata[,group:=factor(group,levels=opts$groups)] %>% setorder(group)
+
 if (isTRUE(args$test_mode)) {
   print("Testing mode activated")
-  sample_metadata <- sample_metadata %>% split(.,.$group) %>% map(~ head(.,n=100)) %>% rbindlist
+  sample_metadata <- sample_metadata %>% split(.,.$group) %>% map(~ head(.,n=250)) %>% rbindlist
 }
 table(sample_metadata$group)
 
@@ -113,7 +116,6 @@ out <- doDiffExpr(sce, opts$groups, args$test, opts$min_detection_rate_per_group
   merge(gene_metadata, all.y=T, by="ens_id") %>%
  .[, sig := (padj_fdr<=opts$threshold_fdr & abs(logFC)>=opts$min.logFC)] %>%
   setorderv(c("sig","padj_fdr"), na.last=T)
-
 
 ##################
 ## Save results ##

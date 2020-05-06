@@ -39,7 +39,7 @@ Define options
 Load RNA expression data
 ```{r load_data, echo=FALSE}
 sce <- readRDS(io$rna.sce)[,sample_metadata$cell]
-sce$group <- sample_metadata$celltype
+sce$group <- sample_metadata$celltype3
 ```
 
 Load gene metadata
@@ -69,13 +69,13 @@ expr.dt <- unique(sce$group) %>% map(function(i) {
 
 Save
 ```{r}
-# to.save <- expr.dt %>% 
-#   merge(gene_metadata[,c("symbol","ens_id")], all.x=T) %>%
-#   setnames("symbol","gene")
-# 
-# fwrite(to.save, paste0(io$outdir,"/avg_expr_per_celltype_and_gene.txt.gz"), sep="\t")
-# 
-# rm(to.save)
+to.save <- expr.dt %>%
+  merge(gene_metadata[,c("symbol","ens_id")], all.x=T) %>%
+  setnames("symbol","gene")
+
+fwrite(to.save, paste0(io$outdir,"/avg_expr_per_celltype3_and_gene.txt.gz"), sep="\t")
+
+rm(to.save)
 ```
 
 Calculate logFC direction

@@ -97,6 +97,14 @@ ggplot(to.plot, aes(x=groupA, y=groupB)) +
 ##########
 ## TEST ##
 ##########
-to.plot %>% setorder(num_genes) %>% head
-to.plot[sum_gemes<0.001]
-  
+
+to.plot %>% setorder(sum_genes) %>% head(n=25)
+
+to.plot[groupB=="PGC" | groupA=="PGC"]
+
+foo <- dt[groupA=="Mixed_mesoderm" & groupB=="PGC" & sig==T] %>% setorder(-log_padj_fdr)
+foo <- dt[groupA=="Visceral_endoderm" & groupB=="Primitive_Streak" & sig==T] %>% setorder(-log_padj_fdr)
+
+Epiblast
+
+to.plot[groipA]

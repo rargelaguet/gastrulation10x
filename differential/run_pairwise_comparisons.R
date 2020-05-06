@@ -57,7 +57,7 @@ opts <- list()
 # )# %>% stringr::str_replace_all(.," ","-")
 
 opts$groups <- c(
-  "Epiblast/PS",
+  "Epiblast-PS",
   "ExE_ectoderm",
   "ExE_endoderm",
   "Nascent_mesoderm",
@@ -92,7 +92,7 @@ for (test in opts$statistical.test) {
     for (j in 1:length(opts$groups)) {
       if (i!=j) {
         groupB <- opts$groups[[j]]
-        outfile <- sprintf("%s/%s_vs-%s.txt.gz", io$outdir,groupA,groupB)# %>% 
+        outfile <- sprintf("%s/%s_vs_%s.txt.gz", io$outdir,groupA,groupB)# %>% 
           # stringr::str_replace_all(.," ","-")
         
         # Define LSF command
