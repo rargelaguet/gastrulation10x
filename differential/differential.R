@@ -20,10 +20,10 @@ args <- p$parse_args(commandArgs(TRUE))
 stopifnot(args$test%in%c("edgeR","t-test","wilcoxon"))
 
 ## START TEST
-# args$groupA <- c("ExE endoderm")
+# args$groupA <- c("ExE_endoderm")
 # args$groupB <- c("Epiblast")
 # args$outfile <- c("/Users/ricard/data/gastrulation10x/results/differential/foo.tsv.gz")
-# args$outfile <- c("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/results/differential/foo.tsv.gz")
+# # args$outfile <- c("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/results/differential/foo.tsv.gz")
 # args$test_mode <- TRUE
 ## END TEST
 
@@ -47,8 +47,8 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 #############
 
 # Define groups
-args$groupA <- args$groupA %>% stringr::str_replace_all(.,"-"," ")
-args$groupB <- args$groupB %>% stringr::str_replace_all(.,"-"," ")
+args$groupA <- args$groupA # %>% stringr::str_replace_all(.,"-"," ")
+args$groupB <- args$groupB # %>% stringr::str_replace_all(.,"-"," ")
 opts$groups <- c(args$groupA,args$groupB)
 
 # Define FDR threshold
@@ -58,8 +58,10 @@ opts$threshold_fdr <- 0.01
 opts$min.logFC <- 1
 
 # For a given gene, the minimum fraction of cells that must express it in at least one group
-opts$min_detection_rate_per_group <- 0.50
+opts$min_detection_rate_per_group <- 0.40
 
+# [NOT USED] Define minimum differnce in the detection rate for significance
+# opts$min.difference.cdr <- 0.10
 
 ###############
 ## Load data ##
@@ -67,8 +69,8 @@ opts$min_detection_rate_per_group <- 0.50
 
 # Update cell metadata
 sample_metadata <- sample_metadata %>%
-  .[celltype2%in%opts$groups] %>%
-  setnames("celltype2","group") %>%
+  .[celltype3%in%opts$groups] %>%
+  setnames("celltype3","group") %>%
   .[,c("cell","group")]
 
 if (isTRUE(args$test_mode)) {
@@ -87,6 +89,18 @@ gene_metadata <- fread(io$gene_metadata) %>%
   .[,c("symbol","ens_id")] %>% 
   setnames("symbol","gene")
 
+################
+## Parse data ##
+################
+
+# calculate detection rate per gene
+cdr.dt <- data.table(
+  ens_id = rownames(sce),
+  detection_rate_A = rowMeans(logcounts(sce[,sce$group==opts$groups[1]])>0),
+  detection_rate_B = rowMeans(logcounts(sce[,sce$group==opts$groups[2]])>0)
+) %>% setnames(c("ens_id",sprintf("detection_rate_%s",opts$groups[1]),sprintf("detection_rate_%s",opts$groups[2])))
+# .[,cdr_diff:=abs(out[,(sprintf("detection_rate_%s",opts$groups[1])),with=F][[1]] - out[,(sprintf("detection_rate_%s",opts$groups[2])),with=F][[1]])] %>%
+
 # Filter genes
 sce <- sce[rownames(sce)%in%gene_metadata$ens_id,]
 
@@ -95,13 +109,15 @@ sce <- sce[rownames(sce)%in%gene_metadata$ens_id,]
 ################################################
 
 out <- doDiffExpr(sce, opts$groups, args$test, opts$min_detection_rate_per_group) %>%
+  merge(cdr.dt, all.y=T, by="ens_id") %>%
   merge(gene_metadata, all.y=T, by="ens_id") %>%
- .[, sig := (padj_fdr<=opts$threshold_fdr & abs(logFC)>opts$min.logFC)] %>%
-  setorderv("padj_fdr", na.last=T)
+ .[, sig := (padj_fdr<=opts$threshold_fdr & abs(logFC)>=opts$min.logFC)] %>%
+  setorderv(c("sig","padj_fdr"), na.last=T)
+
 
 ##################
 ## Save results ##
 ##################
 
-args$outfile <- args$outfile %>% stringr::str_replace_all(.,"-"," ")
+# args$outfile <- args$outfile# %>% stringr::str_replace_all(.,"-"," ")
 fwrite(out, args$outfile, sep="\t", na="NA", quote=F)

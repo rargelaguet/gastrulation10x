@@ -12,8 +12,8 @@ doDiffExpr <- function(sce, groups, test=c("edgeR","t-test","wilcoxon"), min_det
   test <- match.arg(test)
 
   # Filter genes by detection rate per group
-  cdr_A <- rowMeans(exprs(sce[,sce$group==groups[1]])>0) >= min_detection_rate_per_group
-  cdr_B <- rowMeans(exprs(sce[,sce$group==groups[2]])>0) >= min_detection_rate_per_group
+  cdr_A <- rowMeans(logcounts(sce[,sce$group==groups[1]])>0) >= min_detection_rate_per_group
+  cdr_B <- rowMeans(logcounts(sce[,sce$group==groups[2]])>0) >= min_detection_rate_per_group
   sce <- sce[cdr_B | cdr_A,]
   
   if (test=="edgeR") {
@@ -25,7 +25,8 @@ doDiffExpr <- function(sce, groups, test=c("edgeR","t-test","wilcoxon"), min_det
   } else {
     stop("Test not recognised")
   }
-  out[,log_padj_fdr:= -log10(padj_fdr)]
+  
+  out %>% .[,log_padj_fdr:= -log10(padj_fdr)]
   
   return(out)
 }
@@ -38,11 +39,12 @@ doDiffExpr <- function(sce, groups, test=c("edgeR","t-test","wilcoxon"), min_det
 }
 
 .edgeR <- function(sce) {
+  
   # Convert SCE to DGEList
   sce_edger <- scran::convertTo(sce, type="edgeR")
   
   # Define design matrix (with intercept)
-  cdr <- colMeans(exprs(sce)>0)
+  cdr <- colMeans(logcounts(sce)>0)
   design <- model.matrix(~cdr+sce$group)
   
   # Estimate dispersions

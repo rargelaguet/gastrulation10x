@@ -35,7 +35,7 @@ umap <- meta_atlas %>%
 ################
 
 # Remove specific lineages
-plot_df <- umap[!celltype%in%c("ExE ectoderm","PGC", "Parietal endoderm")]
+plot_df <- umap[!celltype%in%c("ExE_ectoderm","PGC", "Parietal_endoderm")]
 
 ###################################
 ## Plot dimensionality reduction ##
