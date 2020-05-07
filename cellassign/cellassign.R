@@ -1,77 +1,74 @@
+# Set up reticulate connection
 library(reticulate)
+if (grepl("ricard",Sys.info()['nodename'])) {
+  use_python("/Users/ricard/anaconda3/envs/gpflow_v2/bin/python", required = TRUE)
+} else if(grepl("ebi",Sys.info()['nodename'])){
+  use_python("/nfs/research1/stegle/users/ricard/conda-envs/gpflow2/bin/python", required = TRUE)
+}  
+py_config()
+
 library(SingleCellExperiment)
 library(tensorflow)
 library(cellassign)
-
-# Set up reticulate connection
-use_python("/Users/ricard/anaconda3/envs/gpflow_v2/bin/python", required = T)
-py_config()
 
 #####################
 ## Define settings ##
 #####################
 
 # Load default settings
-source("/Users/ricard/gastrulation10x/settings.R")
+if (grepl("ricard",Sys.info()['nodename'])) {
+  source("/Users/ricard/gastrulation10x/settings.R")
+} else if(grepl("ebi",Sys.info()['nodename'])){
+  source("/homes/ricard/gastrulation10x/settings.R")
+}  
+io$marker_genes <- paste0(io$basedir,"/results/cellassign/marker_genes.txt.gz")
 
 # Define I/O
 io$outdir <- paste0(io$basedir,"/results/cellassign")
-
 # Define options
 
 # Testing mode
 opts$test <- TRUE
 
 # Cell types to use
-opts$groups <- c(
-  "Epiblast",
-  "Primitive Streak",
-  "ExE ectoderm",
-  "Visceral endoderm",
-  "ExE endoderm",
-  "Nascent mesoderm",
-  "Neurectoderm",
-  "Blood progenitors",
-  "Mixed mesoderm",
-  "ExE mesoderm",
-  "Pharyngeal mesoderm",
-  "Caudal epiblast",
-  "PGC",
-  "Mesenchyme",
-  "Haematoendothelial progenitors",
-  "Surface ectoderm",
-  "Gut",
-  "Paraxial mesoderm",
-  "Notochord",
-  "Somitic mesoderm",
-  "Caudal Mesoderm",
-  "Erythroid",
-  "Def. endoderm",
-  "Parietal endoderm",
-  "Allantois",
-  "Anterior Primitive Streak",
-  "Endothelium",
-  "Forebrain_Midbrain_Hindbrain",
-  "Spinal cord",
-  "Cardiomyocytes",
-  "NMP",
-  "Neural crest"
+opts$groups <- opts$celltypes.1
+
+# Stages to use
+opts$stages <- c(
+  "E6.5",
+  "E6.75",
+  "E7.0",
+  "E7.25",
+  "E7.5",
+  "E7.75",
+  "E8.0",
+  "E8.25",
+  "E8.5",
+  "mixed_gastrulation"
 )
 
+# Maximum of M marker genes per cell type
+opts$max.genes <- 50
+
 # Update metadata
-sample_metadata %>% 
-  setnames("celltype2","group")
+sample_metadata <- sample_metadata %>% 
+  .[stage%in%opts$stages] %>%
+  setnames("celltype","group")
 
 # Acitvate test mode
 if (isTRUE(opts$test)) {
   print("Testing mode, subsetting cells...")
-  opts$groups <- head(opts$groups,n=3)
+  opts$groups <- sample(opts$groups,10)
   sample_metadata <- sample_metadata %>% 
     .[group%in%opts$groups] %>% split(.,.$group) %>% 
-    map(~ head(.,n=100)) %>% rbindlist
+    map(~ head(.,n=50)) %>% rbindlist
 }
 table(sample_metadata$group)
 
+# Sanity checks
+# if (any(table(sample_metadata$group)<100)) {
+#   stop("Some lineages have less than 100 cells")
+# }
 
 ###############
 ## Load data ##
@@ -81,10 +78,17 @@ table(sample_metadata$group)
 sce <- readRDS(io$rna.sce)[,sample_metadata$cell]
 sce$group <- sample_metadata$group
 
-# Load marker genes
-marker_genes.dt <- fread(io$marker_genes.lenient) %>%
-  .[group%in%opts$groups]
+#######################
+## Load marker genes ##
+#######################
 
+marker_genes.dt <- fread(io$marker_genes) %>%
+  setnames("celltype","group") %>%
+  .[group%in%opts$groups] %>%
+  setorder(group,-score)
+
+marker_genes.dt <- marker_genes.dt[,head(.SD,n=opts$max.genes),by="group"]
+print(marker_genes.dt[,.N,by="group"])
 
 ################
 ## cellassign ##
@@ -126,7 +130,10 @@ pheatmap::pheatmap(cellprobs(fit))
 dev.off()
 
 # Compare to ground truth
-print(table(sce$group, celltypes(fit)))
+foo <- table(sce$group, celltypes(fit))
+pdf(sprintf("%s/heatmap_assignments.pdf",io$outdir), width = 8, height = 8)
+pheatmap::pheatmap(foo, cluster_rows = F, cluster_cols = F)
+dev.off()
 
 ##########
 ## Save ##

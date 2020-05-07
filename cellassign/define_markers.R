@@ -12,31 +12,7 @@ io$outdir <- paste0(io$basedir,"/results/cellassign"); dir.create(io$outdir, sho
 ## Options ##
 #############
 
-opts <- list()
-
-# Define cell types
-# opts$groups <- c(
-#   "Epiblast/PS",
-#   "ExE_ectoderm",
-#   "ExE_endoderm",
-#   "Nascent_mesoderm",
-#   "Neuroectoderm",
-#   "Blood_progenitors",
-#   "Mesoderm",
-#   "ExE_mesoderm",
-#   "Caudal_epiblast",
-#   "PGC",
-#   "Mesenchyme",
-#   "Surface_ectoderm",
-#   "Endoderm",
-#   "Notochord",
-#   "Erythroid",
-#   "Parietal_endoderm",
-#   "Endothelium",
-#   "Spinal_cord",
-#   "Cardiomyocytes",
-#   "NMP"
-# )
+opts$groups <- opts$celltypes.1
 
 ##################
 ## Load results ##
@@ -44,10 +20,8 @@ opts <- list()
 
 dt <- list()
 for (i in opts$groups) {
-  i <- opts$groups[[i]]
   for (j in opts$groups) {
     if (i!=j) {
-      j <- opts$groups[[j]]
       file <- sprintf("%s/%s_vs_%s.txt.gz", io$diff.dir,i,j)
       if (file.exists(file)) {
         dt[[file]] <- fread(file) %>%
@@ -57,7 +31,7 @@ for (i in opts$groups) {
           setnames(sprintf("detection_rate_%s",j),"detection_rate_groupB") %>%
           .[,comparison:=paste(i,j,sep="_vs_")]
       } else {
-        sprintf("%s does not exist",file)
+        print(sprintf("%s does not exist",file))
       }
     }
   }
@@ -66,8 +40,8 @@ dt <- rbindlist(dt)
 
 dt[is.na(sig),sig:=F]
 
-# dt[,direction:=c("-","+")[as.numeric(logFC<0)+1]]
-dt[,direction:=c("down","up")[as.numeric(detection_rate_groupA>detection_rate_groupB)+1]]
+dt[,direction:=c("down","up")[as.numeric(logFC<0)+1]]
+# dt[,direction:=c("down","up")[as.numeric(detection_rate_groupA>detection_rate_groupB)+1]]
 
 #########################
 ## Define marker genes ##
@@ -76,8 +50,8 @@ dt[,direction:=c("down","up")[as.numeric(detection_rate_groupA>detection_rate_gr
 # Minimum fraction of significant differential pairwisecomparisons
 opts$score <- 0.75
 
-dt.filt <- dt[,.(score=mean(sig==T & direction=="up")),by=c("groupA","gene")] %>%
-  .[score>=opts$foo] %>%
+dt.filt <- dt[,.(score=mean(sig==T & direction=="up")), by=c("groupA","gene","ens_id")] %>%
+  .[score>=opts$score] %>%
   setnames("groupA","celltype") %>%
   setorder(celltype,-score)
 
@@ -91,29 +65,40 @@ dt.filt <- dt[,.(score=mean(sig==T & direction=="up")),by=c("groupA","gene")] %>
 
 to.plot <- dt.filt %>% .[,.N,by=c("celltype")]
 
-ggbarplot(to.plot, x="celltype", y="N") +
+ggbarplot(to.plot, x="celltype", y="N", fill="celltype") +
+  scale_fill_manual(values=opts$celltype.colors.1) +
   labs(x="", y="Number of marker genes") +
   theme(
     axis.text.y = element_text(size=rel(0.75)),
     axis.text.x = element_text(colour="black",size=rel(0.8), angle=90, hjust=1, vjust=0.5),
-    axis.ticks.x = element_blank()
+    axis.ticks.x = element_blank(),
+    legend.position = "none"
+)
+
+# Plot exclusivity of cell types
+to.plot <- dt.filt %>% .[,N:=.N,by="gene"]
+
+ggboxplot(to.plot, x="celltype", y="N", fill="celltype", color="black") +
+  scale_fill_manual(values=opts$celltype.colors.1) +
+  labs(x="", y="Exclusivity of gene markers\n(the smaller the more exclusive)") +
+  theme(
+    axis.text.y = element_text(size=rel(0.75)),
+    axis.title.y = element_text(size=rel(0.85)),
+    axis.text.x = element_text(colour="black",size=rel(0.7), angle=90, hjust=1, vjust=0.5),
+    legend.position = "none"
   )
 
-# Plot exclusivty of cell types
-
-
 # Plot exclusivity of marker genes
+to.plot <- dt.filt %>%
+  .[,.(Nx=.N),by="gene"] %>%
+  .[,Nx:=factor(Nx)] %>%
+  .[,.(Ny=.N),by="Nx"]
 
-# to.plot <- dt.filt %>%
-#   .[,.N,by="gene"] %>%
-#   .[,as]
-#   setorder(-N)
-# 
-# gghistogram(to.plot, x="N") +
-#   labs(x="Number of cell types", y="") +
-#   theme(
-#     axis.text = element_text(size=rel(0.75)),
-#   )
+ggbarplot(to.plot, x="Nx", y="Ny", fill="gray70") +
+  labs(x="Number of different cell types per marker gene", y="") +
+  theme(
+    axis.text = element_text(size=rel(0.75)),
+  )
 
 ##########
 ## Save ##

@@ -10,62 +10,31 @@ io$outdir <- paste0(io$basedir,"/results/differential/pdf"); dir.create(io$outdi
 ## Options ##
 #############
 
-opts <- list()
-
 # Define cell types
-opts$groups <- c(
-  "Epiblast",
-  "Primitive_Streak",
-  "ExE_ectoderm",
-  "Visceral_endoderm",
-  "ExE_endoderm",
-  "Nascent_mesoderm",
-  "Neurectoderm",
-  "Blood_progenitors",
-  "Mixed_mesoderm",
-  "ExE_mesoderm",
-  "Pharyngeal_mesoderm",
-  "Caudal_epiblast",
-  "PGC",
-  "Mesenchyme",
-  "Haematoendothelial_progenitors",
-  "Surface_ectoderm",
-  "Gut",
-  "Paraxial_mesoderm",
-  "Notochord",
-  "Somitic_mesoderm",
-  "Caudal_Mesoderm",
-  "Erythroid",
-  "Def._endoderm",
-  "Parietal_endoderm",
-  "Allantois",
-  "Anterior_Primitive_Streak",
-  "Endothelium",
-  "Forebrain_Midbrain_Hindbrain",
-  "Spinal_cord",
-  "Cardiomyocytes",
-  "NMP",
-  "Neural_crest"
-)
+opts$groups <- opts$celltypes.1
 
 ##################
 ## Load results ##
 ##################
 
 dt <- list()
-for (i in 1:(length(opts$groups)-1)) {
-  groupA <- opts$groups[[i]]
-  for (j in (i+1):length(opts$groups)) {
-    groupB <- opts$groups[[j]]
-    file <- sprintf("%s/%s_vs-%s.txt.gz", io$diff.dir,groupA,groupB)
-    if (file.exists(file)) {
-      dt[[file]] <- fread(file) %>%
-        .[,c("groupA","groupB"):=list(groupA,groupB)] %>%
-        setnames(sprintf("detection_rate_%s",groupA),"detection_rate_groupA") %>%
-        setnames(sprintf("detection_rate_%s",groupB),"detection_rate_groupB") %>%
-        .[,comparison:=paste(groupA,groupB,sep="_vs_")]
-    } else {
-      sprintf("%s does not exist",file)
+# for (i in 1:(length(opts$groups)-1)) {
+#   groupA <- opts$groups[[i]]
+#   for (j in (i+1):length(opts$groups)) {
+#     groupB <- opts$groups[[j]]
+for (groupA in opts$groups) {
+  for (groupB in opts$groups) {
+    if (groupA!=groupB) {
+      file <- sprintf("%s/%s_vs_%s.txt.gz", io$diff.dir,groupA,groupB)
+      if (file.exists(file)) {
+        dt[[file]] <- fread(file) %>%
+          .[,c("groupA","groupB"):=list(groupA,groupB)] %>%
+          setnames(sprintf("detection_rate_%s",groupA),"detection_rate_groupA") %>%
+          setnames(sprintf("detection_rate_%s",groupB),"detection_rate_groupB") %>%
+          .[,comparison:=paste(groupA,groupB,sep="_vs_")]
+      } else {
+        print(sprintf("%s does not exist",file))
+      }
     }
   }
 }
@@ -77,8 +46,9 @@ dt <- rbindlist(dt)
 
 total_genes <- length(unique(dt$ens_id))
 
-# Heatmap with the fraction of differentially expressed genes between pairs of cell types
-to.plot <- dt[,.(sum_genes=sum(sig,na.rm=T)),by=c("groupA","groupB")] %>%
+# Tile plot with the fraction of differentially expressed genes between pairs of cell types
+to.plot <- dt %>%
+  .[,.(sum_genes=sum(sig,na.rm=T)),by=c("groupA","groupB")] %>%
   .[,fraction_genes:=sum_genes/total_genes] %>%
   .[,groupA:=factor(groupA,levels=opts$groups)] %>%
   .[,groupB:=factor(groupB,levels=opts$groups)]
@@ -93,6 +63,10 @@ ggplot(to.plot, aes(x=groupA, y=groupB)) +
     axis.text.x = element_text(colour="black",size=rel(1.0), angle=90, hjust=1, vjust=0.5),
     axis.ticks = element_blank()
   )
+
+
+# Heatmap with clustering
+
 
 ##########
 ## TEST ##

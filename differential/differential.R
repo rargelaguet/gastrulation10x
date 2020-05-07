@@ -20,11 +20,11 @@ args <- p$parse_args(commandArgs(TRUE))
 stopifnot(args$test%in%c("edgeR","t-test","wilcoxon"))
 
 ## START TEST
-# args$groupA <- c("ExE_ectoderm")
-# args$groupB <- c("Cardiomyocytes")
+# args$groupA <- c("Cardiomyocytes")
+# args$groupB <- c("Parietal_endoderm")
 # args$outfile <- c("/Users/ricard/data/gastrulation10x/results/differential/foo.tsv.gz")
 # # args$outfile <- c("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/results/differential/foo.tsv.gz")
-# args$test_mode <- TRUE
+# args$test_mode <- FALSE
 ## END TEST
 
 
@@ -69,7 +69,7 @@ opts$min_detection_rate_per_group <- 0.40
 
 # Update cell metadata
 sample_metadata <- sample_metadata %>%
-  .[celltype3%in%opts$groups] %>%
+  .[celltype%in%opts$groups] %>%
   setnames("celltype","group") %>%
   .[,c("cell","group")]
 
@@ -115,7 +115,8 @@ out <- doDiffExpr(sce, opts$groups, args$test, opts$min_detection_rate_per_group
   merge(cdr.dt, all.y=T, by="ens_id") %>%
   merge(gene_metadata, all.y=T, by="ens_id") %>%
  .[, sig := (padj_fdr<=opts$threshold_fdr & abs(logFC)>=opts$min.logFC)] %>%
-  setorderv(c("sig","padj_fdr"), na.last=T)
+  # setorderv(c("sig","padj_fdr"), na.last=T)
+  setorder(-sig, padj_fdr, na.last=T)
 
 ##################
 ## Save results ##

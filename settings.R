@@ -18,8 +18,8 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 }
 
 io$metadata <- paste0(io$basedir,"/sample_metadata.txt.gz")
-io$marker_genes.stringent <- paste0(io$basedir,"/results/marker_genes/marker_genes_stringent.tsv.gz")
-io$marker_genes.lenient <- paste0(io$basedir,"/results/marker_genes/marker_genes_lenient.tsv.gz")
+# io$marker_genes.stringent <- paste0(io$basedir,"/results/marker_genes/marker_genes_stringent.tsv.gz")
+# io$marker_genes.lenient <- paste0(io$basedir,"/results/marker_genes/marker_genes_lenient.tsv.gz")
 io$average_expression_per_celltype <- paste0(io$basedir,"/results/marker_genes/avg_expr_per_celltype_and_gene.txt.gz")
 io$rna.sce <- paste0(io$basedir,"/processed/SingleCellExperiment.rds")
 
@@ -175,6 +175,20 @@ opts$celltypes.3 <- c(
   "Cardiomyocytes",
   "NMP"
 )
+
+opts$stages <- c(
+  "E6.5",
+  "E6.75",
+  "E7.0",
+  "E7.25",
+  "E7.5",
+  "E7.75",
+  "E8.0",
+  "E8.25",
+  "E8.5",
+  "mixed_gastrulation"
+)
+
 ##########################
 ## Load sample metadata ##
 ##########################
