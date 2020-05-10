@@ -21,39 +21,39 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 } else if(grepl("ebi",Sys.info()['nodename'])){
   source("/homes/ricard/gastrulation10x/settings.R")
 }  
-io$marker_genes <- paste0(io$basedir,"/results/cellassign/marker_genes.txt.gz")
+# io$marker_genes <- paste0(io$basedir,"/results/cellassign/marker_genes.txt.gz")
 
 # Define I/O
 io$outdir <- paste0(io$basedir,"/results/cellassign")
 # Define options
-
-# Testing mode
-opts$test <- TRUE
 
 # Cell types to use
 opts$groups <- opts$celltypes.1
 
 # Stages to use
 opts$stages <- c(
-  "E6.5",
-  "E6.75",
-  "E7.0",
-  "E7.25",
-  "E7.5",
-  "E7.75",
-  "E8.0",
-  "E8.25",
-  "E8.5",
-  "mixed_gastrulation"
+  # "E6.5",
+  # "E6.75",
+  # "E7.0"
+  # "E7.25",
+  "E7.5"
+  # "E7.75",
+  # "E8.0",
+  # "E8.25",
+  # "E8.5",
+  # "mixed_gastrulation"
 )
 
-# Maximum of M marker genes per cell type
+# Maximum of M marker genes per cell type (sorted according to marker score)
 opts$max.genes <- 50
 
 # Update metadata
 sample_metadata <- sample_metadata %>% 
   .[stage%in%opts$stages] %>%
   setnames("celltype","group")
+
+# Testing mode
+opts$test <- FALSE
 
 # Acitvate test mode
 if (isTRUE(opts$test)) {
@@ -63,12 +63,16 @@ if (isTRUE(opts$test)) {
     .[group%in%opts$groups] %>% split(.,.$group) %>% 
     map(~ head(.,n=50)) %>% rbindlist
 }
-table(sample_metadata$group)
 
-# Sanity checks
-# if (any(table(sample_metadata$group)<100)) {
-#   stop("Some lineages have less than 100 cells")
-# }
+# Minimum number of cells per lineage
+opts$min.cells <- 50
+foo <- table(sample_metadata$group)
+if (any(foo<opts$min.cells)) {
+  warning(sprintf("Some lineages have less than %d cells, removing them...",opts$min.cells))
+  opts$groups <- names(which(foo>=opts$min.cells))
+}
+sample_metadata <- sample_metadata[group%in%opts$groups]
+table(sample_metadata$group)
 
 ###############
 ## Load data ##
@@ -87,6 +91,10 @@ marker_genes.dt <- fread(io$marker_genes) %>%
   .[group%in%opts$groups] %>%
   setorder(group,-score)
 
+# Sanity check
+stopifnot(all(unique(marker_genes.dt$group)%in%opts$groups))
+
+# Maximum number of marker genes per cell type
 marker_genes.dt <- marker_genes.dt[,head(.SD,n=opts$max.genes),by="group"]
 print(marker_genes.dt[,.N,by="group"])
 
@@ -104,13 +112,10 @@ sce <- sce[rownames(bmat),]
 # Extract size factors
 s <- sizeFactors(sce)
 
-# Covariate matrix (TO-DO: ADD BATCH INFORMATION)
-
 # Run
 fit <- cellassign(sce, 
   marker_gene_info = bmat, 
   min_delta = 1,
-  # X = X,
   s = s, 
   # learning_rate = 1e-2, 
   shrinkage = TRUE,
@@ -121,8 +126,6 @@ print(fit)
 ##################
 ## Query output ##
 ##################
-
-# celltypes(fit, assign_prob = 0.95)
 
 # Plot heatmap of cell type probabilities
 pdf(sprintf("%s/heatmap_probabilities.pdf",io$outdir), width = 8, height = 8)
@@ -139,4 +142,6 @@ dev.off()
 ## Save ##
 ##########
 
-saveRDS(fit, paste0(io$outdir,"/cellassign_fit.rds"))
+outfile <- sprintf("%s/cellassign_fit_%s.rds",io$outdir,paste(opts$stages,collapse="-"))
+print(outfile)
+saveRDS(fit, outfile)

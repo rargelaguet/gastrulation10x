@@ -20,8 +20,8 @@ args <- p$parse_args(commandArgs(TRUE))
 stopifnot(args$test%in%c("edgeR","t-test","wilcoxon"))
 
 ## START TEST
-# args$groupA <- c("Cardiomyocytes")
-# args$groupB <- c("Parietal_endoderm")
+# args$groupA <- c("Neural_crest")
+# args$groupB <- c("PGC")
 # args$outfile <- c("/Users/ricard/data/gastrulation10x/results/differential/foo.tsv.gz")
 # # args$outfile <- c("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/results/differential/foo.tsv.gz")
 # args$test_mode <- FALSE
