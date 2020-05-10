@@ -1,5 +1,5 @@
 # Set up reticulate connection
-library(reticulate)
+suppressPackageStartupMessages(library(reticulate))
 if (grepl("ricard",Sys.info()['nodename'])) {
   use_python("/Users/ricard/anaconda3/envs/gpflow_v2/bin/python", required = TRUE)
 } else if(grepl("ebi",Sys.info()['nodename'])){
@@ -7,9 +7,27 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 }  
 py_config()
 
-library(SingleCellExperiment)
-library(tensorflow)
-library(cellassign)
+# Load libraries
+suppressPackageStartupMessages(library(SingleCellExperiment))
+suppressPackageStartupMessages(library(tensorflow))
+suppressPackageStartupMessages(library(argparse))
+suppressPackageStartupMessages(library(cellassign))
+
+######################
+## Define arguments ##
+######################
+
+p <- ArgumentParser(description='')
+p$add_argument('--stages',    type="character",   nargs='+',  help='Stage(s)')
+p$add_argument('--outdir',    type="character",               help='Output directory')
+p$add_argument('--test',      action = "store_true",          help='Testing mode')
+args <- p$parse_args(commandArgs(TRUE))
+
+## START TEST 
+# args$stages <- c("E6.5", "E6.75")
+# args$outdir <- "/Users/ricard/data/gastrulation10x/results/cellassign"
+# args$test <- TRUE
+## END TEST
 
 #####################
 ## Define settings ##
@@ -21,46 +39,28 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 } else if(grepl("ebi",Sys.info()['nodename'])){
   source("/homes/ricard/gastrulation10x/settings.R")
 }  
-# io$marker_genes <- paste0(io$basedir,"/results/cellassign/marker_genes.txt.gz")
 
-# Define I/O
-io$outdir <- paste0(io$basedir,"/results/cellassign")
-# Define options
+# I/O
+dir.create(args$outdir, show); dir.create(paste0(args$outdir,"/pdf"))
 
 # Cell types to use
-opts$groups <- opts$celltypes.1
-
-# Stages to use
-opts$stages <- c(
-  # "E6.5",
-  # "E6.75",
-  # "E7.0"
-  # "E7.25",
-  "E7.5"
-  # "E7.75",
-  # "E8.0",
-  # "E8.25",
-  # "E8.5",
-  # "mixed_gastrulation"
-)
+opts$celltypes <- opts$celltypes.1
 
 # Maximum of M marker genes per cell type (sorted according to marker score)
 opts$max.genes <- 50
 
 # Update metadata
 sample_metadata <- sample_metadata %>% 
-  .[stage%in%opts$stages] %>%
+  .[stage%in%args$stages] %>%
   setnames("celltype","group")
 
-# Testing mode
-opts$test <- FALSE
 
 # Acitvate test mode
-if (isTRUE(opts$test)) {
+if (isTRUE(args$test)) {
   print("Testing mode, subsetting cells...")
-  opts$groups <- sample(opts$groups,10)
+  opts$celltypes <- sample(opts$celltypes,10)
   sample_metadata <- sample_metadata %>% 
-    .[group%in%opts$groups] %>% split(.,.$group) %>% 
+    .[group%in%opts$celltypes] %>% split(.,.$group) %>% 
     map(~ head(.,n=50)) %>% rbindlist
 }
 
@@ -69,10 +69,10 @@ opts$min.cells <- 50
 foo <- table(sample_metadata$group)
 if (any(foo<opts$min.cells)) {
   warning(sprintf("Some lineages have less than %d cells, removing them...",opts$min.cells))
-  opts$groups <- names(which(foo>=opts$min.cells))
+  opts$celltypes <- names(which(foo>=opts$min.cells))
 }
-sample_metadata <- sample_metadata[group%in%opts$groups]
-table(sample_metadata$group)
+sample_metadata <- sample_metadata[group%in%opts$celltypes]
+
 
 ###############
 ## Load data ##
@@ -88,15 +88,30 @@ sce$group <- sample_metadata$group
 
 marker_genes.dt <- fread(io$marker_genes) %>%
   setnames("celltype","group") %>%
-  .[group%in%opts$groups] %>%
+  .[group%in%opts$celltypes] %>%
   setorder(group,-score)
 
 # Sanity check
-stopifnot(all(unique(marker_genes.dt$group)%in%opts$groups))
+stopifnot(all(unique(marker_genes.dt$group)%in%opts$celltypes))
 
 # Maximum number of marker genes per cell type
 marker_genes.dt <- marker_genes.dt[,head(.SD,n=opts$max.genes),by="group"]
+
+######################
+## Print statistics ##
+######################
+
+print("Number of marker genes per cell type")
 print(marker_genes.dt[,.N,by="group"])
+
+print("Total number of marker genes")
+print(length(unique(marker_genes.dt$ens_id)))
+
+print("Number of cells per cell type:")
+table(sample_metadata$group)
+
+print("Total number of cells")
+print(nrow(sce))
 
 ################
 ## cellassign ##
@@ -128,13 +143,13 @@ print(fit)
 ##################
 
 # Plot heatmap of cell type probabilities
-pdf(sprintf("%s/heatmap_probabilities.pdf",io$outdir), width = 8, height = 8)
+pdf(sprintf("%s/pdf/heatmap_probabilities.pdf",args$outdir), width = 8, height = 8)
 pheatmap::pheatmap(cellprobs(fit))
 dev.off()
 
 # Compare to ground truth
 foo <- table(sce$group, celltypes(fit))
-pdf(sprintf("%s/heatmap_assignments.pdf",io$outdir), width = 8, height = 8)
+pdf(sprintf("%s/pdf/heatmap_assignments.pdf",args$outdir), width = 8, height = 8)
 pheatmap::pheatmap(foo, cluster_rows = F, cluster_cols = F)
 dev.off()
 
@@ -142,6 +157,6 @@ dev.off()
 ## Save ##
 ##########
 
-outfile <- sprintf("%s/cellassign_fit_%s.rds",io$outdir,paste(opts$stages,collapse="-"))
+outfile <- sprintf("%s/cellassign_fit_%s.rds",args$outdir,paste(args$stages,collapse="-"))
 print(outfile)
 saveRDS(fit, outfile)
