@@ -10,24 +10,7 @@ py_config()
 # Load libraries
 suppressPackageStartupMessages(library(SingleCellExperiment))
 suppressPackageStartupMessages(library(tensorflow))
-suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(cellassign))
-
-######################
-## Define arguments ##
-######################
-
-p <- ArgumentParser(description='')
-p$add_argument('--stages',    type="character",   nargs='+',  help='Stage(s)')
-p$add_argument('--outdir',    type="character",               help='Output directory')
-p$add_argument('--test',      action = "store_true",          help='Testing mode')
-args <- p$parse_args(commandArgs(TRUE))
-
-## START TEST 
-args$stages <- c("E6.5")
-args$outdir <- "/Users/ricard/data/gastrulation10x/results/cellassign"
-args$test <- TRUE
-## END TEST
 
 #####################
 ## Define settings ##
@@ -39,9 +22,11 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 } else if(grepl("ebi",Sys.info()['nodename'])){
   source("/homes/ricard/gastrulation10x/settings.R")
 }  
+io$outdir <- "/Users/ricard/data/gastrulation10x/results/cellassign/test"
+dir.create(io$outdir, showWarnings = F)
 
-# I/O
-dir.create(args$outdir, showWarnings = F); dir.create(paste0(args$outdir,"/pdf"), showWarnings = F)
+opts$stages <- c("E6.5")
+opts$test <- TRUE
 
 # Cell types to use
 opts$celltypes <- opts$celltypes.1
@@ -51,12 +36,13 @@ opts$max.genes <- 50
 
 # Update metadata
 sample_metadata <- sample_metadata %>% 
-  .[stage%in%args$stages] %>%
+  .[stage%in%opts$stages] %>%
+  .[celltype%in%c("Epiblast","Primitive_Streak")] %>%
   setnames("celltype","group")
 
 
 # Acitvate test mode
-if (isTRUE(args$test)) {
+if (isTRUE(opts$test)) {
   print("Testing mode, subsetting cells...")
   opts$celltypes <- sample(opts$celltypes,10)
   sample_metadata <- sample_metadata %>% 
@@ -90,6 +76,11 @@ marker_genes.dt <- fread(io$marker_genes) %>%
   setnames("celltype","group") %>%
   .[group%in%opts$celltypes] %>%
   setorder(group,-score)
+
+marker_genes.dt <- fread("/Users/ricard/data/gastrulation10x/results/differential/Epiblast_vs_Primitive_Streak.txt.gz") %>%
+  .[sig==T] %>%
+  .[,group:=ifelse(logFC>0,"Primitive_Streak","Epiblast")] %>%
+  .[,c("group","ens_id")]
 
 
 # Sanity check
@@ -144,13 +135,13 @@ print(fit)
 ##################
 
 # Plot heatmap of cell type probabilities
-pdf(sprintf("%s/pdf/heatmap_probabilities_%s.pdf",args$outdir,paste(args$stages,collapse="-")), width = 8, height = 8)
+pdf(sprintf("%s/pdf/heatmap_probabilities_%s.pdf",io$outdir,paste(opts$stages,collapse="-")), width = 8, height = 8)
 pheatmap::pheatmap(cellprobs(fit))
 dev.off()
 
 # Compare to ground truth
 foo <- table(sce$group, celltypes(fit))
-pdf(sprintf("%s/pdf/heatmap_assignments_%s.pdf",args$outdir,paste(args$stages,collapse="-")), width = 8, height = 8)
+pdf(sprintf("%s/pdf/heatmap_assignments_%s.pdf",io$outdir,paste(opts$stages,collapse="-")), width = 8, height = 8)
 pheatmap::pheatmap(foo, cluster_rows = F, cluster_cols = F)
 dev.off()
 
@@ -158,5 +149,5 @@ dev.off()
 ## Save ##
 ##########
 
-outfile <- sprintf("%s/cellassign_fit_%s.rds",args$outdir,paste(args$stages,collapse="-"))
+outfile <- sprintf("%s/cellassign_fit_%s.rds",io$outdir,paste(opts$stages,collapse="-"))
 saveRDS(fit, outfile)
