@@ -53,7 +53,7 @@ to.plot <- dt %>%
   .[,groupA:=factor(groupA,levels=opts$groups)] %>%
   .[,groupB:=factor(groupB,levels=opts$groups)]
 
-ggplot(to.plot, aes(x=groupA, y=groupB)) +
+p <- ggplot(to.plot, aes(x=groupA, y=groupB)) +
   geom_tile(aes(fill=fraction_genes)) +
   labs(x="", y="") +
   scale_fill_gradient(low = "white", high = "red") +
@@ -64,8 +64,31 @@ ggplot(to.plot, aes(x=groupA, y=groupB)) +
     axis.ticks = element_blank()
   )
 
+pdf(sprintf("%s/heatmap_fraction_differential_genes.pdf",io$outdir), width = 9, height = 7)
+print(p)
+dev.off()
 
-# Heatmap with clustering
+## barplots ##
+
+to.plot <- dt %>%
+  .[,.(sum_genes=sum(sig,na.rm=T)),by=c("groupA","groupB")]
+
+for (i in unique(to.plot$groupA)) {
+  p <- ggplot(to.plot[groupA==i], aes(x = reorder(groupB, -sum_genes), y = sum_genes)) + 
+    facet_wrap(~groupA) +
+    geom_bar(stat = "identity") +
+    theme_classic() +
+    labs(x="", y="Number of diff. genes") +
+    theme(
+      axis.text.y = element_text(colour="black",size=rel(1.0)),
+      axis.text.x = element_text(colour="black",size=rel(1.0), angle=90, hjust=1, vjust=0.5),
+      axis.ticks.x = element_blank()
+    )
+  
+  pdf(sprintf("%s/%s_barplots_numbers_differential_genes.pdf",io$outdir,i), width = 7, height = 5)
+  print(p)
+  dev.off()
+}
 
 
 ##########
@@ -78,7 +101,3 @@ to.plot[groupB=="PGC" | groupA=="PGC"]
 
 foo <- dt[groupA=="Mixed_mesoderm" & groupB=="PGC" & sig==T] %>% setorder(-log_padj_fdr)
 foo <- dt[groupA=="Visceral_endoderm" & groupB=="Primitive_Streak" & sig==T] %>% setorder(-log_padj_fdr)
-
-Epiblast
-
-to.plot[groipA]
