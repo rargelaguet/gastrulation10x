@@ -40,25 +40,9 @@ sample_metadata <- sample_metadata %>%
   .[celltype%in%c("Epiblast","Primitive_Streak")] %>%
   setnames("celltype","group")
 
-
-# Acitvate test mode
-if (isTRUE(opts$test)) {
-  print("Testing mode, subsetting cells...")
-  opts$celltypes <- sample(opts$celltypes,10)
-  sample_metadata <- sample_metadata %>% 
-    .[group%in%opts$celltypes] %>% split(.,.$group) %>% 
-    map(~ head(.,n=50)) %>% rbindlist
-}
-
-# Minimum number of cells per lineage
-opts$min.cells <- 50
-foo <- table(sample_metadata$group)
-if (any(foo<opts$min.cells)) {
-  warning(sprintf("Some lineages have less than %d cells, removing them...",opts$min.cells))
-  opts$celltypes <- names(which(foo>=opts$min.cells))
-}
-sample_metadata <- sample_metadata[group%in%opts$celltypes]
-
+# Subset cels
+sample_metadata <- sample_metadata %>% split(.$group) %>% 
+    map(~ head(.,n=100)) %>% rbindlist
 
 ###############
 ## Load data ##
@@ -135,19 +119,8 @@ print(fit)
 ##################
 
 # Plot heatmap of cell type probabilities
-pdf(sprintf("%s/pdf/heatmap_probabilities_%s.pdf",io$outdir,paste(opts$stages,collapse="-")), width = 8, height = 8)
 pheatmap::pheatmap(cellprobs(fit))
-dev.off()
 
 # Compare to ground truth
 foo <- table(sce$group, celltypes(fit))
-pdf(sprintf("%s/pdf/heatmap_assignments_%s.pdf",io$outdir,paste(opts$stages,collapse="-")), width = 8, height = 8)
 pheatmap::pheatmap(foo, cluster_rows = F, cluster_cols = F)
-dev.off()
-
-##########
-## Save ##
-##########
-
-outfile <- sprintf("%s/cellassign_fit_%s.rds",io$outdir,paste(opts$stages,collapse="-"))
-saveRDS(fit, outfile)
