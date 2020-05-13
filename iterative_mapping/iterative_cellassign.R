@@ -77,6 +77,7 @@ m <- dt %>%
 h <- hclust(dist(m))
 
 plot(h)
+
 #######################
 ## Recursive mapping ##
 #######################
@@ -91,6 +92,10 @@ recursive_mapping.fn <- function(sce, h) {
   # Define groups
   groupA <- names(which(cut==1))
   groupB <- names(which(cut==2))
+  
+  if (length(groupA)==1 & length(groupB)==1) {
+    return()
+  }
   stopifnot(length(intersect(groupA,groupB))==0)
   
   sample_metadata.filt <- sample_metadata %>%
@@ -117,7 +122,7 @@ recursive_mapping.fn <- function(sce, h) {
   
   cellassign.fit <- cellassign.fn(sce, marker_list)
   celltypes(cellassign.fit)
-  
+    
 }
 
 
