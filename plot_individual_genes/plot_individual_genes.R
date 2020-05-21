@@ -73,7 +73,8 @@ opts$celltypes = c(
 
 # Update sample metadata
 sample_metadata <- sample_metadata %>% 
-  .[stage%in%opts$stages & celltype%in%opts$celltypes]
+  .[stage%in%opts$stages & celltype%in%opts$celltypes] %>%
+  .[,celltype:=factor(celltype, levels=opts$celltypes)]
 
 table(sample_metadata$stage)
 table(sample_metadata$celltype)
@@ -106,7 +107,8 @@ rownames(sce) <- foo[rownames(sce)]
 ## Plot ##
 ##########
 
-genes.to.plot <- c("Dnmt3l","Apoe")
+# genes.to.plot <- c("Dnmt3l","Apoe")
+genes.to.plot <- rownames(sce)
 
 for (i in 1:length(genes.to.plot)) {
   gene <- genes.to.plot[i]
@@ -115,15 +117,15 @@ for (i in 1:length(genes.to.plot)) {
   # Create data.table to plot
   to.plot <- data.table(
     cell = colnames(sce),
-    expr = logcounts(sce[i,])[1,]
-  ) %>% merge(sample_metadata[,c("cell","celltype")],by="cell") %>%   # Add cell metadata
-    .[,celltype:=factor(celltype, levels=opts$celltypes)]
+    celltype = sample_metadata$celltype,
+    expr = logcounts(sce[gene,])[1,]
+  )
 
   # Plot
   p <- ggplot(to.plot, aes(x=celltype, y=expr, fill=celltype)) +
     # geom_jitter(size=0.8) +
-    geom_violin(alpha=0.75) +
-    geom_boxplot(alpha=1.0, width=0.4, outlier.shape=NA) +
+    geom_violin(scale = "width") +
+    geom_boxplot(width=0.5, outlier.shape=NA) +
     scale_fill_manual(values=opts$celltype.colors.1) +
     theme_classic() +
     labs(x="",y="RNA expression") +

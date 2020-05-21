@@ -25,24 +25,44 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 io$outdir <- "/Users/ricard/data/gastrulation10x/results/cellassign/test"
 dir.create(io$outdir, showWarnings = F)
 
-opts$stages <- c("E6.5")
+# opts$stages <- c("E6.5")
+opts$stages <- c(
+  "E6.5",
+  "E6.75",
+  "E7.0",
+  "E7.25",
+  "E7.5",
+  "E7.75",
+  "E8.0",
+  "E8.25",
+  "E8.5",
+  "mixed_gastrulation"
+)
+
 opts$test <- TRUE
 
 # Cell types to use
-opts$celltypes <- opts$celltypes.1
+# opts$celltypes <- opts$celltypes.1
+opts$celltypes <- c(
+  "Erythroid1", "Erythroid2",
+  "Visceral endoderm", "ExE endoderm",
+  "Epiblast", "Primitive Streak"
+)
 
 # Maximum of M marker genes per cell type (sorted according to marker score)
-opts$max.genes <- 50
+opts$max.genes <- 25
 
 # Update metadata
 sample_metadata <- sample_metadata %>% 
-  .[stage%in%opts$stages] %>%
-  .[celltype%in%c("Epiblast","Primitive_Streak")] %>%
+  .[,celltype:=stringr::str_replace_all(celltype,"_", " ")] %>%
+  .[stage%in%opts$stages & celltype%in%opts$celltypes] %>%
   setnames("celltype","group")
 
-# Subset cels
-sample_metadata <- sample_metadata %>% split(.$group) %>% 
-    map(~ head(.,n=100)) %>% rbindlist
+# Subset cells
+if (isTRUE(opts$test)) {
+  sample_metadata <- sample_metadata %>% 
+    split(.$group) %>% map(~ head(.,n=100)) %>% rbindlist
+}
 
 ###############
 ## Load data ##
@@ -57,21 +77,19 @@ sce$group <- sample_metadata$group
 #######################
 
 marker_genes.dt <- fread(io$marker_genes) %>%
+  .[,celltype:=stringr::str_replace_all(celltype,"_", " ")] %>%
   setnames("celltype","group") %>%
   .[group%in%opts$celltypes] %>%
   setorder(group,-score)
-
-marker_genes.dt <- fread("/Users/ricard/data/gastrulation10x/results/differential/Epiblast_vs_Primitive_Streak.txt.gz") %>%
-  .[sig==T] %>%
-  .[,group:=ifelse(logFC>0,"Primitive_Streak","Epiblast")] %>%
-  .[,c("group","ens_id")]
-
 
 # Sanity check
 stopifnot(all(unique(marker_genes.dt$group)%in%opts$celltypes))
 
 # Maximum number of marker genes per cell type
-marker_genes.dt <- marker_genes.dt[,head(.SD,n=opts$max.genes),by="group"]
+marker_genes.dt <- marker_genes.dt %>% 
+  .[,head(.SD,n=opts$max.genes),by="group"]
+
+table(marker_genes.dt$group)
 
 ######################
 ## Print statistics ##
@@ -96,6 +114,7 @@ print(ncol(sce))
 # Create binary membership matrix
 marker_gene_list <- split(marker_genes.dt, by="group") %>% map(~ .$ens_id)
 bmat <- marker_list_to_mat(marker_gene_list)
+bmat <- bmat[,colnames(bmat)!="other"]
 
 # Subset SingleCellExperiment
 sce <- sce[rownames(bmat),]
@@ -122,5 +141,10 @@ print(fit)
 pheatmap::pheatmap(cellprobs(fit))
 
 # Compare to ground truth
-foo <- table(sce$group, celltypes(fit))
+celltype.pred <- celltypes(fit, assign_prob = 0.50)
+foo <- table(sce$group, celltype.pred)
 pheatmap::pheatmap(foo, cluster_rows = F, cluster_cols = F)
+
+
+foobar <- merge(sample_metadata[,c("cell","group")], data.table(cell=colnames(sce), celltype.pred=celltype.pred), by="cell")
+mean(foobar$group==foobar$celltype.pred)
