@@ -29,15 +29,10 @@ dir.create(io$outdir, showWarnings = F)
 opts$celltypes <- c(
   "Erythroid1", "Erythroid2",
   "Visceral endoderm", "ExE endoderm",
-  # "Epiblast", "Primitive Streak",
+  "Epiblast", "Primitive Streak",
   "ExE ectoderm",
   "Notochord"
 )
-
-opts$number.diff.genes <- 50
-opts$min.logFC <- 1
-opts$threshold.fdr <- 0.01
-opts$min_detection_rate_per_group <- 0.25
 
 # Test mode
 opts$test_mode <- TRUE
@@ -53,9 +48,9 @@ sample_metadata <- sample_metadata %>%
 # Subset cells
 # if (isTRUE(opts$test_mode)) {
 sample_metadata_query <- sample_metadata %>% 
-  split(.$celltype) %>% map(~ head(.,n=250)) %>% rbindlist
+  split(.$celltype) %>% map(~ head(.,n=500)) %>% rbindlist
 sample_metadata_atlas <- sample_metadata %>% 
-  split(.$celltype) %>% map(~ tail(.,n=250)) %>% rbindlist
+  split(.$celltype) %>% map(~ tail(.,n=500)) %>% rbindlist
 # } else {
 #   sample_metadata_query <- sample_metadata
 # }
