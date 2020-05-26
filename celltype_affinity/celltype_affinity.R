@@ -5,9 +5,20 @@ library(ggpubr)
 ##############
 
 source("/Users/ricard/gastrulation10x/settings.R")
-io$outdir <- paste0(io$basedir,"/results/celltype_score"); dir.create(io$outdir, showWarnings = F)
+io$outdir <- paste0(io$basedir,"/results/celltype_affinity"); dir.create(io$outdir, showWarnings = F)
 
-opts$scale <- FALSE
+opts$stages <- c(
+  "E6.5",
+  "E6.75",
+  "E7.0",
+  "E7.25",
+  "E7.5"
+  # "E7.75"
+  # "E8.0",
+  # "E8.25",
+  # "E8.5"
+  # "mixed_gastrulation"
+)
 
 ###############
 ## Load data ##
@@ -15,26 +26,25 @@ opts$scale <- FALSE
 
 # Load metadata
 sample_metadata <- sample_metadata %>% 
+  .[stage%in%opts$stages] %>%
   .[,c("cell","celltype")]
 
+foo <- table(sample_metadata$celltype)<100
+if (any(foo)) {
+  warning("There are cell types with very small amount of cells, removing them:")
+  warning(paste(names(which(foo)),collapse=",  "))
+  sample_metadata <- sample_metadata[!celltype%in%names(which(foo))]
+}
+
 # Load gene markers
-marker_genes.dt <- fread(io$marker_genes)
+marker_genes.dt <- fread(io$marker_genes) %>%
+  .[celltype%in%unique(sample_metadata$celltype)]
 
 # Load SingleCellExperiment
 sce <- readRDS(io$rna.sce)[,sample_metadata$cell]
 
-# Add predicted cell types to the SCE object
+# Add cell types to the SingleCellExperiment object
 sce$celltype.pred <- sample_metadata$celltype
-
-################
-## Parse data ##
-################
-
-if (isTRUE(opts$scale)) {
-  stop("TO-DO")
-} else {
-  expr.matrix <- logcounts(sce)
-}
 
 ##################
 ## Computations ##
@@ -43,15 +53,13 @@ if (isTRUE(opts$scale)) {
 # Calculate atlas-based cell type "score" for each predicted cell type in the query
 dt <- unique(sce$celltype.pred) %>% map(function(i) {
 # dt <- unique(sce$celltype.pred) %>% head(n=5) %>% map(function(i) {
-  expr.matrix[,sce$celltype.pred==i] %>% as.matrix %>% 
+  logcounts(sce[,sce$celltype.pred==i]) %>% as.matrix %>% 
     rowMeans %>% as.data.table(keep.rownames = T) %>% 
     setnames(c("ens_id","expr")) %>%
     merge(marker_genes.dt[,c("celltype","ens_id")], by="ens_id", allow.cartesian=TRUE) %>%
     .[,.(score=mean(expr)),by="celltype"] %>%
     .[,celltype.pred:=i]
 }) %>% rbindlist
-
-# TO-DO Calculate cell type "score" for each single cell
 
 ##########
 ## Plot ##
@@ -86,4 +94,4 @@ for (i in unique(dt$celltype.pred)) {
 ## Save ##
 ##########
 
-# fwrite(dt.filt, paste0(io$outdir,"/marker_genes.txt.gz"))
+fwrite(dt, paste0(io$outdir,"/celltype_affinity_E6.5_to_E7.5.txt.gz"))

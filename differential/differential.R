@@ -11,6 +11,7 @@ suppressMessages(library(argparse))
 p <- ArgumentParser(description='')
 p$add_argument('--groupA',    type="character",    help='group A')
 p$add_argument('--groupB',    type="character",    help='group B')
+p$add_argument('--stages',    type="character",    nargs="+", help='Stages to use')
 p$add_argument('--test',      type="character",    help='Statistical test')
 p$add_argument('--test_mode', action="store_true", help='Test mode? subset number of cells')
 p$add_argument('--outfile',   type="character",    help='Output file')
@@ -20,8 +21,9 @@ args <- p$parse_args(commandArgs(TRUE))
 stopifnot(args$test%in%c("edgeR","t-test","wilcoxon"))
 
 ## START TEST
-# args$groupA <- c("Neural_crest")
-# args$groupB <- c("PGC")
+# args$groupA <- c("Epiblast")
+# args$groupB <- c("Gut")
+# args$stages <- c("E7.0","E7.25")
 # args$outfile <- c("/Users/ricard/data/gastrulation10x/results/differential/foo.tsv.gz")
 # # args$outfile <- c("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/results/differential/foo.tsv.gz")
 # args$test_mode <- FALSE
@@ -47,8 +49,6 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 #############
 
 # Define groups
-# args$groupA <- args$groupA # %>% stringr::str_replace_all(.,"-"," ")
-# args$groupB <- args$groupB # %>% stringr::str_replace_all(.,"-"," ")
 opts$groups <- c(args$groupA,args$groupB)
 
 # Define FDR threshold
@@ -69,9 +69,9 @@ opts$min_detection_rate_per_group <- 0.40
 
 # Update cell metadata
 sample_metadata <- sample_metadata %>%
-  .[celltype%in%opts$groups] %>%
+  .[celltype%in%opts$groups & stage%in%args$stages] %>%
   setnames("celltype","group") %>%
-  .[,c("cell","group")]
+  .[,c("cell","stage","group")]
 
 # Sort cells so that groupA comes before groupB
 sample_metadata[,group:=factor(group,levels=opts$groups)] %>% setorder(group)

@@ -21,8 +21,21 @@ io$outdir <- paste0(io$basedir,"/results/differential"); dir.create(io$outdir, s
 # Define cell types
 opts$groups <- opts$celltypes.1
 
+# Define stages
+opts$stages <- c(
+  # "E6.5",
+  # "E6.75",
+  "E7.0",
+  "E7.25",
+  "E7.5",
+  "E7.75"
+  # "E8.0",
+  # "E8.25",
+  # "E8.5",
+  # "mixed_gastrulation"
+)
+
 # Statistical test
-# opts$test <- c("edgeR","t-test")
 opts$statistical.test <- c("edgeR")
 
 # Testing mode
@@ -38,8 +51,7 @@ for (test in opts$statistical.test) {
     for (j in 1:length(opts$groups)) {
       if (i!=j) {
         groupB <- opts$groups[[j]]
-        outfile <- sprintf("%s/%s_vs_%s.txt.gz", io$outdir,groupA,groupB)# %>% 
-          # stringr::str_replace_all(.," ","-")
+        outfile <- sprintf("%s/%s_vs_%s.txt.gz", io$outdir,groupA,groupB)
         
         # Define LSF command
         if (grepl("ricard",Sys.info()['nodename'])) {
