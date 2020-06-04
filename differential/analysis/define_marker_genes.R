@@ -5,14 +5,15 @@ library(ggpubr)
 #########
 
 source("/Users/ricard/gastrulation10x/settings.R")
-io$diff.dir <- paste0(io$basedir,"/results/differential")
-io$outdir <- paste0(io$basedir,"/results/marker_genes"); dir.create(io$outdir, showWarnings = F)
+io$diff.dir <- paste0(io$basedir,"/results/differential/E8.5")
+io$outdir <- paste0(io$basedir,"/results/marker_genes/E8.5"); dir.create(io$outdir, showWarnings = F)
 
 #############
 ## Options ##
 #############
 
-opts$groups <- opts$celltypes.1
+opts$groups <- strsplit(list.files(io$diff.dir, pattern="*.gz"),"_vs_") %>% map(~ .[[1]]) %>% unlist %>% unique
+# opts$groups <- opts$celltypes.1
 
 ##################
 ## Load results ##
@@ -47,7 +48,7 @@ dt[,direction:=c("down","up")[as.numeric(logFC<0)+1]]
 ## Define marker genes ##
 #########################
 
-# Minimum fraction of significant differential pairwisecomparisons
+# Minimum fraction of significant differential pairwise comparisons
 opts$score <- 0.75
 
 dt.filt <- dt[,.(score=round(mean(sig==T & direction=="up"),3)), by=c("groupA","gene","ens_id")] %>%
@@ -65,8 +66,7 @@ dt.filt <- dt[,.(score=round(mean(sig==T & direction=="up"),3)), by=c("groupA","
 
 to.plot <- dt.filt %>% .[,.N,by=c("celltype")]
 
-pdf(sprintf("%s/pdf/barplot_number_marker_genes.pdf",io$outdir), width = 9, height = 5)
-ggbarplot(to.plot, x="celltype", y="N", fill="celltype") +
+p <- ggbarplot(to.plot, x="celltype", y="N", fill="celltype") +
   scale_fill_manual(values=opts$celltype.colors.1) +
   labs(x="", y="Number of marker genes") +
   theme(
@@ -75,13 +75,15 @@ ggbarplot(to.plot, x="celltype", y="N", fill="celltype") +
     axis.ticks.x = element_blank(),
     legend.position = "none"
 )
+
+pdf(sprintf("%s/pdf/barplot_number_marker_genes.pdf",io$outdir), width = 9, height = 5)
+print(p)
 dev.off()
 
 # Plot exclusivity of cell types
 to.plot <- dt.filt %>% .[,N:=.N,by="gene"]
 
-pdf(sprintf("%s/pdf/boxplot_exclusivity.pdf",io$outdir), width = 9, height = 5)
-ggboxplot(to.plot, x="celltype", y="N", fill="celltype", color="black") +
+p <- ggboxplot(to.plot, x="celltype", y="N", fill="celltype", color="black") +
   scale_fill_manual(values=opts$celltype.colors.1) +
   labs(x="", y="Exclusivity of gene markers\n(the smaller the more exclusive)") +
   theme(
@@ -90,6 +92,9 @@ ggboxplot(to.plot, x="celltype", y="N", fill="celltype", color="black") +
     axis.text.x = element_text(colour="black",size=rel(0.7), angle=90, hjust=1, vjust=0.5),
     legend.position = "none"
   )
+
+pdf(sprintf("%s/pdf/boxplot_exclusivity.pdf",io$outdir), width = 9, height = 5)
+print(p)
 dev.off()
 
 # Plot exclusivity of marker genes
@@ -98,12 +103,13 @@ to.plot <- dt.filt %>%
   .[,Nx:=factor(Nx)] %>%
   .[,.(Ny=.N),by="Nx"]
 
-pdf(sprintf("%s/pdf/boxplot_exclusivity2.pdf",io$outdir), width = 7, height = 5)
-ggbarplot(to.plot, x="Nx", y="Ny", fill="gray70") +
+p <- ggbarplot(to.plot, x="Nx", y="Ny", fill="gray70") +
   labs(x="Number of different cell types per marker gene", y="") +
   theme(
     axis.text = element_text(size=rel(0.75)),
   )
+pdf(sprintf("%s/pdf/boxplot_exclusivity2.pdf",io$outdir), width = 7, height = 5)
+print(p)
 dev.off()
 
 ##########

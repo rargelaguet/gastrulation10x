@@ -5,15 +5,16 @@ library(ggpubr)
 ##############
 
 source("/Users/ricard/gastrulation10x/settings.R")
-io$outdir <- paste0(io$basedir,"/results/celltype_affinity"); dir.create(io$outdir, showWarnings = F)
+io$marker_genes <- paste0(io$basedir,"/results/marker_genes/E7.0_to_E7.75/marker_genes.txt.gz")
+io$outdir <- paste0(io$basedir,"/results/celltype_affinity/E7.0_to_E7.75"); dir.create(io$outdir, showWarnings = F)
 
 opts$stages <- c(
-  "E6.5",
-  "E6.75",
+  # "E6.5",
+  # "E6.75",
   "E7.0",
   "E7.25",
-  "E7.5"
-  # "E7.75"
+  "E7.5",
+  "E7.75"
   # "E8.0",
   # "E8.25",
   # "E8.5"
@@ -65,14 +66,14 @@ dt <- unique(sce$celltype.pred) %>% map(function(i) {
 ## Plot ##
 ##########
 
-colors <- opts$celltype.colors.1
-names(colors) <- names(colors) %>% stringr::str_replace_all("_"," ")
+colors <- opts$celltype.colors[names(opts$celltype.colors)%in%unique(marker_genes.dt$celltype)]
+# names(colors) <- names(colors) %>% stringr::str_replace_all("_"," ")
 
 # Plot number of marker genes per cell types
 for (i in unique(dt$celltype.pred)) {
   
   to.plot <- dt[celltype.pred==i] %>%
-    .[,celltype:=stringr::str_replace_all(celltype,"_"," ")] %>%
+    # .[,celltype:=stringr::str_replace_all(celltype,"_"," ")] %>%
     .[,celltype:=factor(celltype,levels=names(colors))]
   
   p <- ggbarplot(to.plot, x="celltype", y="score", fill="celltype") +

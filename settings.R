@@ -32,7 +32,7 @@ io$cellassign.dir <- paste0(io$basedir,"/results/cellassign")
 
 opts <- list()
 
-opts$celltype.colors.1 = c(
+opts$celltype.colors = c(
 	"Epiblast" = "#635547",
 	"Primitive_Streak" = "#DABE99",
 	"Caudal_epiblast" = "#9e6762",
@@ -72,51 +72,51 @@ opts$celltype.colors.1 = c(
 	"Parietal_endoderm" = "#1A1A1A"
 )
 
-opts$celltype.colors.2 = c(
-	"Epiblast" = "#635547",
-	"Primitive_Streak" = "#DABE99",
-	"Caudal_epiblast" = "#9e6762",
-	"PGC" = "#FACB12",
-	"Anterior_Primitive_Streak" = "#c19f70",
-	"Notochord" = "#0F4A9C",
-	"Def._endoderm" = "#F397C0",
-	"Gut" = "#EF5A9D",
-	"Nascent_mesoderm" = "#C594BF",
-	"Mixed_mesoderm" = "#DFCDE4",
-	# "Intermediate mesoderm" = "#139992",
-	"Caudal_Mesoderm" = "#3F84AA",
-	"Paraxial_mesoderm" = "#8DB5CE",
-	"Somitic_mesoderm" = "#005579",
-	"Pharyngeal_mesoderm" = "#C9EBFB",
-	"Cardiomyocytes" = "#B51D8D",
-	"Allantois" = "#532C8A",
-	"ExE_mesoderm" = "#8870ad",
-	"Mesenchyme" = "#cc7818",
-	"Haematoendothelial_progenitors" = "#FBBE92",
-	"Endothelium" = "#ff891c",
-	# "Blood_progenitors_1" = "#f9decf",
-	# "Blood_progenitors_2" = "#c9a997",
-	"Blood_progenitors" = "#c9a997",
-	# "Erythroid1" = "#C72228",
-	# "Erythroid2" = "#f79083",
-	# "Erythroid3" = "#EF4E22",
-	"Erythroid" = "#EF4E22",
-	"NMP" = "#8EC792",
-	# "Rostral_neurectoderm" = "#65A83E",
-	# "Caudal_neurectoderm" = "#354E23",
-	"Neurectoderm" = "#65A83E",
-	"Neural_crest" = "#C3C388",
-	"Forebrain_Midbrain_Hindbrain" = "#647a4f",
-	"Spinal_cord" = "#CDE088",
-	"Surface_ectoderm" = "#f7f79e",
-	"Visceral_endoderm" = "#F6BFCB",
-	"ExE_endoderm" = "#7F6874",
-	"ExE_ectoderm" = "#989898",
-	"Parietal_endoderm" = "#1A1A1A"
-)
+# opts$celltype.colors.2 = c(
+# 	"Epiblast" = "#635547",
+# 	"Primitive_Streak" = "#DABE99",
+# 	"Caudal_epiblast" = "#9e6762",
+# 	"PGC" = "#FACB12",
+# 	"Anterior_Primitive_Streak" = "#c19f70",
+# 	"Notochord" = "#0F4A9C",
+# 	"Def._endoderm" = "#F397C0",
+# 	"Gut" = "#EF5A9D",
+# 	"Nascent_mesoderm" = "#C594BF",
+# 	"Mixed_mesoderm" = "#DFCDE4",
+# 	# "Intermediate mesoderm" = "#139992",
+# 	"Caudal_Mesoderm" = "#3F84AA",
+# 	"Paraxial_mesoderm" = "#8DB5CE",
+# 	"Somitic_mesoderm" = "#005579",
+# 	"Pharyngeal_mesoderm" = "#C9EBFB",
+# 	"Cardiomyocytes" = "#B51D8D",
+# 	"Allantois" = "#532C8A",
+# 	"ExE_mesoderm" = "#8870ad",
+# 	"Mesenchyme" = "#cc7818",
+# 	"Haematoendothelial_progenitors" = "#FBBE92",
+# 	"Endothelium" = "#ff891c",
+# 	# "Blood_progenitors_1" = "#f9decf",
+# 	# "Blood_progenitors_2" = "#c9a997",
+# 	"Blood_progenitors" = "#c9a997",
+# 	# "Erythroid1" = "#C72228",
+# 	# "Erythroid2" = "#f79083",
+# 	# "Erythroid3" = "#EF4E22",
+# 	"Erythroid" = "#EF4E22",
+# 	"NMP" = "#8EC792",
+# 	# "Rostral_neurectoderm" = "#65A83E",
+# 	# "Caudal_neurectoderm" = "#354E23",
+# 	"Neurectoderm" = "#65A83E",
+# 	"Neural_crest" = "#C3C388",
+# 	"Forebrain_Midbrain_Hindbrain" = "#647a4f",
+# 	"Spinal_cord" = "#CDE088",
+# 	"Surface_ectoderm" = "#f7f79e",
+# 	"Visceral_endoderm" = "#F6BFCB",
+# 	"ExE_endoderm" = "#7F6874",
+# 	"ExE_ectoderm" = "#989898",
+# 	"Parietal_endoderm" = "#1A1A1A"
+# )
 
 
-opts$celltypes.1 = c(
+opts$celltypes = c(
 	"Epiblast",
 	"Primitive_Streak",
 	"Caudal_epiblast",
@@ -154,29 +154,6 @@ opts$celltypes.1 = c(
 	"ExE_endoderm",
 	"ExE_ectoderm",
 	"Parietal_endoderm"
-)
-
-opts$celltypes.3 <- c(
-  "Epiblast/PS",
-  "ExE_ectoderm",
-  "ExE_endoderm",
-  "Nascent_mesoderm",
-  "Neuroectoderm",
-  "Blood_progenitors",
-  "Mesoderm",
-  "ExE_mesoderm",
-  "Caudal_epiblast",
-  "PGC",
-  "Mesenchyme",
-  "Surface_ectoderm",
-  "Endoderm",
-  "Notochord",
-  "Erythroid",
-  "Parietal_endoderm",
-  "Endothelium",
-  "Spinal_cord",
-  "Cardiomyocytes",
-  "NMP"
 )
 
 opts$stages <- c(

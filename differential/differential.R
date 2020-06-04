@@ -17,13 +17,10 @@ p$add_argument('--test_mode', action="store_true", help='Test mode? subset numbe
 p$add_argument('--outfile',   type="character",    help='Output file')
 args <- p$parse_args(commandArgs(TRUE))
 
-# Sanity checks
-stopifnot(args$test%in%c("edgeR","t-test","wilcoxon"))
-
 ## START TEST
-# args$groupA <- c("Epiblast")
-# args$groupB <- c("Gut")
-# args$stages <- c("E7.0","E7.25")
+# args$groupA <- c("Visceral_endoderm")
+# args$groupB <- c("Notochord")
+# args$stages <- c("E7.0","E7.25","E7.5")
 # args$outfile <- c("/Users/ricard/data/gastrulation10x/results/differential/foo.tsv.gz")
 # # args$outfile <- c("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/results/differential/foo.tsv.gz")
 # args$test_mode <- FALSE
@@ -43,6 +40,12 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 } else {
   stop("Computer not recognised")
 }
+
+# Sanity checks
+stopifnot(args$stages%in%opts$stages)
+stopifnot(args$groupA%in%opts$celltypes.1)
+stopifnot(args$groupB%in%opts$celltypes.1)
+stopifnot(args$test%in%c("edgeR","t-test","wilcoxon"))
 
 #############
 ## Options ##

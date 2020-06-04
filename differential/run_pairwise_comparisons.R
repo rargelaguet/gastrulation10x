@@ -8,7 +8,7 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 } else if(grepl("ebi",Sys.info()['nodename'])){
   source("/homes/ricard/gastrulation10x/settings.R")
   io$script <- "/homes/ricard/gastrulation10x/differential/differential.R"
-  io$tmpdir <- "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/results/differential/tmp"; dir.create(io$tmpdir, showWarnings=F)
+  io$tmpdir <- "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/results/differential/E8.5/tmp"; dir.create(io$tmpdir, showWarnings=F)
 } else {
   stop("Computer not recognised")
 }
@@ -18,20 +18,17 @@ io$outdir <- paste0(io$basedir,"/results/differential"); dir.create(io$outdir, s
 ## Options ##
 #############
 
-# Define cell types
-opts$groups <- opts$celltypes.1
-
 # Define stages
 opts$stages <- c(
   # "E6.5",
   # "E6.75",
-  "E7.0",
-  "E7.25",
-  "E7.5",
-  "E7.75"
+  # "E7.0",
+  # "E7.25",
+  # "E7.5",
+  # "E7.75"
   # "E8.0",
   # "E8.25",
-  # "E8.5",
+  "E8.5"
   # "mixed_gastrulation"
 )
 
@@ -41,17 +38,22 @@ opts$statistical.test <- c("edgeR")
 # Testing mode
 opts$test_mode <- FALSE
 
+# Define cell types
+# opts$groups <- opts$celltypes.1
+opts$groups <- names(which(table(sample_metadata[stage%in%opts$stages,celltype])>=100))
+
 #########
 ## Run ##
 #########
 
 for (test in opts$statistical.test) {
   for (i in 1:length(opts$groups)) {
+  # for (i in length(opts$groups)) {
     groupA <- opts$groups[[i]]
     for (j in 1:length(opts$groups)) {
       if (i!=j) {
         groupB <- opts$groups[[j]]
-        outfile <- sprintf("%s/%s_vs_%s.txt.gz", io$outdir,groupA,groupB)
+        outfile <- sprintf("%s/E8.5/%s_vs_%s.txt.gz", io$outdir,groupA,groupB)
         
         # Define LSF command
         if (grepl("ricard",Sys.info()['nodename'])) {
@@ -59,7 +61,7 @@ for (test in opts$statistical.test) {
         } else if (grepl("ebi",Sys.info()['nodename'])) {
           lsf <- sprintf("bsub -M 18000 -n 1 -o %s/%s_vs_%s.txt", io$tmpdir,groupA,groupB)
         }
-        cmd <- sprintf("%s Rscript %s --groupA %s --groupB %s --test %s --outfile %s", lsf, io$script, groupA, groupB, test, outfile)
+        cmd <- sprintf("%s Rscript %s --stages %s --groupA %s --groupB %s --test %s --outfile %s", lsf, io$script, paste(opts$stages, collapse=" "), groupA, groupB, test, outfile)
         if (isTRUE(opts$test_mode)) cmd <- paste0(cmd, " --test_mode")
         
         # Run
@@ -83,20 +85,6 @@ for (test in opts$statistical.test) {
 #   c("groupA"="Erythroid1",          "groupB"="Anterior_Primitive_Streak"),
 #   c("groupA"="Erythroid1",          "groupB"="Haematoendothelial_progenitors")
 # )
-
-# opts$comparisons <- list(
-#   c("groupA"="Allantois",           "groupB"="Haematoendothelial_progenitors"),
-#   c("groupA"="Blood_progenitors_2", "groupB"="Haematoendothelial_progenitors"),
-#   c("groupA"="Blood_progenitors_2", "groupB"="Mesenchyme"),
-#   c("groupA"="Cardiomyocytes",      "groupB"="ExE_ectoderm"),
-#   c("groupA"="Cardiomyocytes",      "groupB"="ExE_endoderm"),
-#   c("groupA"="Cardiomyocytes",      "groupB"="Parietal_endoderm"),
-#   c("groupA"="Erythroid1",          "groupB"="Parietal_endoderm"),
-#   c("groupA"="Caudal_neurectoderm", "groupB"="Neural_crest"),
-#   c("groupA"="Endothelium",          "groupB"="Epiblast"),
-#   c("groupA"="Endothelium",          "groupB"="Visceral_endoderm")
-# )
-
 
 # for (comparison in opts$comparisons) {
 #   groupA <- comparison[["groupA"]]; groupB <- comparison[["groupB"]]
