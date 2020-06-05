@@ -9,7 +9,7 @@ suppressPackageStartupMessages(library(SingleCellExperiment))
 suppressPackageStartupMessages(library(scran))
 suppressPackageStartupMessages(library(scater))
 suppressPackageStartupMessages(library(batchelor))
-suppressPackageStartupMessages(library(edgeR))
+# suppressPackageStartupMessages(library(edgeR))
 
 #####################
 ## Define settings ##
@@ -23,22 +23,22 @@ if (grepl("ricard",Sys.info()['nodename'])) {
   source("/homes/ricard/gastrulation10x/settings.R")
   source("/homes/ricard/gastrulation10x/iterative_mapping/mnn/utils.R")
 }  
-io$outfile <- paste0(io$basedir,"/results/iterative_mapping/mnn/test.txt")
+io$outdir <- paste0(io$basedir,"/results/iterative_mapping/mnn")
 io$dist <- paste0(io$basedir,"/results/phylogenetic_tree/PAGA_distances.csv.gz")
 dir.create(io$outdir, showWarnings = F)
 
 # Cell types to use
-opts$celltypes <- c(
-  "Erythroid1", "Erythroid2",
-  "Visceral endoderm", "ExE endoderm",
-  "Epiblast", "Primitive Streak",
-  "ExE ectoderm",
-  "Notochord"
-)
-# opts$celltypes <- opts$celltypes %>% stringr::str_replace_all("/", "_") %>% stringr::str_replace_all("_", " ") 
+# opts$celltypes <- c(
+#   "Erythroid1", "Erythroid2",
+#   "Visceral endoderm", "ExE endoderm",
+#   "Epiblast", "Primitive Streak",
+#   "ExE ectoderm",
+#   "Notochord"
+# )
+opts$celltypes <- opts$celltypes %>% stringr::str_replace_all("/", "_") %>% stringr::str_replace_all("_", " ") 
 
 # Test mode
-opts$test_mode <- TRUE
+opts$test_mode <- FALSE
 
 # Update metadata
 sample_metadata <- sample_metadata %>%
@@ -123,7 +123,7 @@ p <- ggplot(to.plot, aes(x=celltype, y=celltype.pred, fill=fraction)) +
     axis.text.x = element_text(colour="black",size=rel(0.8), angle=90, hjust=1, vjust=0.5)
   )
 
-pdf(paste0(io$outdir,"/foo.pdf"), width=8, height=6.5, useDingbats = F)
+pdf(paste0(io$outdir,"/test.pdf"), width=8, height=6.5, useDingbats = F)
 print(p)
 dev.off()
 
@@ -131,4 +131,4 @@ dev.off()
 ## Save ##
 ##########
 
-fwrite(pred.dt, io$outfile, sep="\t")
+fwrite(pred.dt, paste0(io$outdir,"/test.txt.gz"), sep="\t")
