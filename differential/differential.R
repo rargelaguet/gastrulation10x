@@ -12,15 +12,15 @@ p <- ArgumentParser(description='')
 p$add_argument('--groupA',    type="character",    help='group A')
 p$add_argument('--groupB',    type="character",    help='group B')
 p$add_argument('--stages',    type="character",    nargs="+", help='Stages to use')
-p$add_argument('--test',      type="character",    help='Statistical test')
+p$add_argument('--test',      type="character",    default="edgeR", help='Statistical test')
 p$add_argument('--test_mode', action="store_true", help='Test mode? subset number of cells')
 p$add_argument('--outfile',   type="character",    help='Output file')
 args <- p$parse_args(commandArgs(TRUE))
 
 ## START TEST
-# args$groupA <- c("Visceral_endoderm")
-# args$groupB <- c("Notochord")
-# args$stages <- c("E7.0","E7.25","E7.5")
+# args$groupA <- c("Mixed_mesoderm")
+# args$groupB <- c("ExE_ectoderm")
+# args$stages <- c("E7.5")
 # args$outfile <- c("/Users/ricard/data/gastrulation10x/results/differential/foo.tsv.gz")
 # # args$outfile <- c("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/results/differential/foo.tsv.gz")
 # args$test_mode <- FALSE
@@ -43,8 +43,8 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 
 # Sanity checks
 stopifnot(args$stages%in%opts$stages)
-stopifnot(args$groupA%in%opts$celltypes.1)
-stopifnot(args$groupB%in%opts$celltypes.1)
+stopifnot(args$groupA%in%opts$celltypes)
+stopifnot(args$groupB%in%opts$celltypes)
 stopifnot(args$test%in%c("edgeR","t-test","wilcoxon"))
 
 #############
