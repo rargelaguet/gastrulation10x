@@ -40,25 +40,28 @@ mapping.fn <- function(sce.query, sce.atlas, h, ...) {
   diff <- differential_expression(sce.atlas, groups.parsed[1], groups.parsed[2])
   
   # Select genes
-  markers.groupA <- diff[padj_fdr<0.01 & logFC>1,ens_id]
-  markers.groupB <- diff[padj_fdr<0.01 & logFC<(-1),ens_id]
-  genes <- c(markers.groupA,markers.groupB)
-  
   # TO-DO: SANITY CHECK THAT GENES>0
+  markers.groupA <- diff[padj_fdr<0.10 & logFC>0.5,ens_id]
+  markers.groupB <- diff[padj_fdr<0.10 & logFC<(-0.5),ens_id]
+  genes <- c(markers.groupA,markers.groupB)
+  print(length(genes))
+  
+  # Joint normalisation
+  sce.all <- joint.normalisation(sce.query, sce.atlas, ...)
   
   # Run MNN
-  dt <- mnn.fn(sce.query, sce.atlas, npcs = 25, k = 15, genes = genes, ...)
+  dt <- mnn.fn(sce.all, sce.query, sce.atlas, genes = genes, npcs = 25, k = 25, ...)
   
   return(dt)
     
 }
 
 
-mnn.fn <- function(sce.query, sce.atlas, genes = NULL, npcs = 50, k = 15, cosineNorm = FALSE) {
+joint.normalisation <- function(sce.query, sce.atlas, cosineNorm = FALSE) {
+  
   block <- c(sce.atlas$sample,sce.query$sample) %>% as.factor
   
   if (isTRUE(cosineNorm)) {
-    cat("Doing cosine normalisation...")
     assay <- "cosineNorm"
     
     # Log normalisation per data set
@@ -79,7 +82,7 @@ mnn.fn <- function(sce.query, sce.atlas, genes = NULL, npcs = 50, k = 15, cosine
     assay(sce.query, assay) <- cosineNorm(assay(sce.query, "logcounts"))
     
     # Concatenate
-    sce_all <- SingleCellExperiment(
+    sce.all <- SingleCellExperiment(
       list(cosineNorm=cbind(assay(sce.atlas,assay), assay(sce.query,assay)))
     )
     
@@ -87,30 +90,48 @@ mnn.fn <- function(sce.query, sce.atlas, genes = NULL, npcs = 50, k = 15, cosine
     assay <- "logcounts"
     
     # Concatenate
-    sce_all <- SingleCellExperiment(
+    sce.all <- SingleCellExperiment(
       list(counts=Matrix::Matrix(cbind(counts(sce.atlas),counts(sce.query)),sparse=TRUE))
     )
     
     # Log Normalise
-    # sce_all <- logNormCounts(sce_all)
-    sce_all <- multiBatchNorm(sce_all, batch=block)
+    sce.all <- multiBatchNorm(sce.all, batch=block)
+  }
+  
+  # Create block vector
+  sce.all$block <- c(sce.atlas$sample,sce.query$sample) %>% as.factor
+  
+  return(sce.all)
+}
+
+mnn.fn <- function(sce.all, sce.query, sce.atlas, genes = NULL, npcs = 50, k = 25, cosineNorm = FALSE) {
+  
+  # Note that normalisation must be done beforehand using the joint.normalisation function
+  block <- sce.all$block
+  
+  if ("cosineNorm" %in% names(assays(sce.all))) {
+    assay <- "cosineNorm"
+  } else {
+    assay <- "logcounts"
   }
   
   # Highly variable genes
-  if (is.null(genes)) {
-    genes <- getHVGs(sce_all, block=block, assay.type=assay)
-    # genes <- rownames(sce.atlas)
-  }
+  # (Q) Not sure if selecting HVGs using only the atlas is a good idea
+  # if (is.null(genes)) {
+  #   # genes <- getHVGs(sce.atlas, block=as.factor(sce.atlas$sample), assay.type="logcounts")
+  #   genes <- getHVGs(sce.all, block=block, assay.type="logcounts")
+  #   # genes <- rownames(sce.atlas)
+  # }
   
   # PCA
-  pca_all <- multiBatchPCA(sce_all,
+  pca_all <- multiBatchPCA(sce.all,
     batch = block,
     subset.row = genes,
     d = npcs,
     preserve.single = TRUE,
     assay.type = assay
   )[[1]]
-  rownames(pca_all) <- colnames(sce_all)
+  rownames(pca_all) <- colnames(sce.all)
   atlas_pca <- pca_all[1:ncol(sce.atlas),]
   query_pca <- pca_all[-(1:ncol(sce.atlas)),]
 
@@ -124,7 +145,7 @@ mnn.fn <- function(sce.query, sce.atlas, genes = NULL, npcs = 50, k = 15, cosine
   order_df$stage <- as.character(order_df$stage)
   set.seed(42)
   atlas_corrected <- doBatchCorrect(
-    sce_atlas       = sce.atlas,
+    sce.atlas       = sce.atlas,
     timepoints      = atlas_meta$stage,
     samples         = atlas_meta$sample,
     timepoint_order = order_df$stage,
@@ -161,8 +182,8 @@ mnn.fn <- function(sce.query, sce.atlas, genes = NULL, npcs = 50, k = 15, cosine
   stage.multinomial.prob <- foo$stage.score
 
   #  Prepare output
-  ct <- lapply(mapping, function(x) x$celltypes.mapped); is.na(ct) <- lengths(ct) == 0
-  st <- lapply(mapping, function(x) x$stages.mapped); is.na(st) <- lengths(st) == 0
+  ct <- lapply(mapping, function(x) x$celltype.mapped); is.na(ct) <- lengths(ct) == 0
+  st <- lapply(mapping, function(x) x$stage.mapped); is.na(st) <- lengths(st) == 0
   cm <- lapply(mapping, function(x) x$cells.mapped[1]); is.na(cm) <- lengths(cm) == 0
   mapping.dt <- data.table(
     cell = names(mapping), 
@@ -218,7 +239,7 @@ getmode <- function(v, dist) {
   }
 }
 
-getHVGs <- function(sce, block, min.mean = 1e-3, p.value=0.01, ...){
+getHVGs <- function(sce, block, min.mean = 1e-3, p.value = 0.01, ...){
   decomp <- modelGeneVar(sce, block=block, ...)
   decomp <- decomp[decomp$mean > min.mean,]
   decomp$FDR <- p.adjust(decomp$p.value, method = "fdr")
@@ -295,7 +316,7 @@ differential_expression <- function(sce.atlas, groupA, groupB) {
 
 
 
-doBatchCorrect <- function(sce_atlas, timepoints, samples, timepoint_order, sample_order, pca, BPPARAM = SerialParam()){
+doBatchCorrect <- function(sce.atlas, timepoints, samples, timepoint_order, sample_order, pca, BPPARAM = SerialParam()){
   require(BiocParallel)
   
   if(length(unique(samples)) == 1){
@@ -337,7 +358,7 @@ doBatchCorrect <- function(sce_atlas, timepoints, samples, timepoint_order, samp
     correct <- correct_list[[1]]
   }
   
-  correct <- correct[match(colnames(sce_atlas), rownames(correct)),]
+  correct <- correct[match(colnames(sce.atlas), rownames(correct)),]
   
   return(correct)
   

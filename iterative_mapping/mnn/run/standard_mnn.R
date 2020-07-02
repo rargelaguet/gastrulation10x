@@ -22,14 +22,13 @@ args <- p$parse_args(commandArgs(TRUE))
 #   # "E6.75",
 #   # "E7.0",
 #   # "E7.25",
-#   "E7.5",
+#   "E7.5"
 #   # "E7.75"
 #   # "E8.0",
 #   # "E8.25",
-#   "E8.5"
+#   # "E8.5"
 #   # "mixed_gastrulation"
 # )
-# 
 # args$test_samples <- c(
 #   # E7.5
 #   # "2",
@@ -39,7 +38,6 @@ args <- p$parse_args(commandArgs(TRUE))
 #   # "19",
 #   # "20"
 # )
-# 
 # args$test <- FALSE
 ## END TEST ##
 
@@ -50,15 +48,16 @@ args <- p$parse_args(commandArgs(TRUE))
 # Load default settings
 if (grepl("ricard",Sys.info()['nodename'])) {
   source("/Users/ricard/gastrulation10x/settings.R")
-  source("/Users/ricard/gastrulation10x/iterative_mapping/mnn/utils.R")
+  source("/Users/ricard/gastrulation10x/iterative_mapping/mnn/run/utils.R")
+  io$load_data_script <- "/Users/ricard/gastrulation10x/iterative_mapping/mnn/run/load_data.R"
 } else if(grepl("ebi",Sys.info()['nodename'])){
   source("/homes/ricard/gastrulation10x/settings.R")
-  source("/homes/ricard/gastrulation10x/iterative_mapping/mnn/utils.R")
+  source("/homes/ricard/gastrulation10x/iterative_mapping/mnn/run/utils.R")
+  io$load_data_script <- "/homes/ricard/gastrulation10x/iterative_mapping/mnn/run/load_data.R"
 }  
+io$marker_genes <- paste0(io$basedir,"/results/marker_genes/all_stages/marker_genes.txt.gz")
 io$outdir <- paste0(io$basedir,"/results/iterative_mapping/mnn")
 io$dist <- paste0(io$basedir,"/results/phylogenetic_tree/PAGA_distances.csv.gz")
-
-io$outdir <- paste0(io$basedir,"/rna/results/iterative_mapping")
 
 if (isTRUE(args$test)) print("Test mode activated...")
 
@@ -66,30 +65,26 @@ if (isTRUE(args$test)) print("Test mode activated...")
 ## Load data ##
 ###############
 
-io$basedir <- "/hps/nobackup2/research/stegle/users/ricard/scnmt_gastrulation_TetChimera/TO_MERGE_scnmt_gastrulation_TetKO"
-io$metadata <- paste0(io$basedir,"/sample_metadata.txt.gz")
-io$sce <- paste0(io$basedir,"/rna/SingleCellExperiment.rds")
-
-source(io$script_load_data)
+source(io$load_data_script)
 
 #############
 ## Run MNN ##
 #############
 
-mapping_dt <- mnn.fn(sce_query, sce_atlas, npcs = 50, k = 25, cosineNorm = TRUE)
+# Joint normalisation
+sce.all <- joint.normalisation(sce.query, sce.atlas, cosineNorm = TRUE)
 
-# table(mapping_dt$celltype_mapped)
+# Select HVGs
+genes <- getHVGs(sce.atlas, block=as.factor(sce.atlas$sample), p.value = 0.10)
 
-# foo <- fread("/Users/ricard/data/scnmt_gastrulation_TetChimera/rna/results/iterative_mapping/tet_chimera_march20_plate1_standard_mnn.txt.gz") %>%
-#   merge(mapping_dt, by="cell")
+# MNN
+mapping.dt <- mnn.fn(sce.all, sce.query, sce.atlas, genes = genes, npcs = 50, k = 25)
 
-# foo <- fread("/Users/ricard/data/scnmt_gastrulation_TetChimera/TO_MERGE_scnmt_gastrulation_TetKO/rna/mapping_10x/sample_metadata_mapping_mnn.txt") %>%
-#   merge(mapping_dt %>% copy %>% setnames("cell","id_rna"), by="id_rna") %>%
-#   .[,c("id_rna","lineage10x","celltype_mapped")]
+# table(mapping.dt$celltype_mapped)
 
 ##########
 ## Save ##
 ##########
 
-fwrite(mapping_dt, sprintf("%s/%s_standard_mnn.txt.gz",io$outdir,paste(args$query_plates,collapse="_")), sep="\t")
+fwrite(mapping.dt, sprintf("%s/%s_standard_mnn.txt.gz",io$outdir,paste(args$test_samples,collapse="_")), sep="\t")
 

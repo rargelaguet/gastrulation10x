@@ -234,5 +234,6 @@ opts$samples <- c(
 ##########################
 
 sample_metadata <- fread(io$metadata) %>%
-  .[stripped==F & doublet==F]
+  .[stripped==F & doublet==F] %>%
+  .[,celltype:=factor(celltype, levels=names(opts$celltype.colors))]
   
