@@ -79,13 +79,12 @@ sce <- sce[rowSums(counts(sce))>25]
 ##################
 
 # PCA
-pca <- prcomp(t(logcounts(sce)), rank.=5)
+# pca <- prcomp(t(logcounts(sce)), rank.=5)
+pca <- irlba::prcomp_irlba(t(logcounts(sce)), n=5)$x
 
+dist.object <- dist(pca)
 
-
-matdistX <- as.dist(matdist)
-
-h <- hclust(matdistX, method = 'ward.D')
+h <- hclust(dist.object, method = 'ward.D')
 plot(h)
 
 
