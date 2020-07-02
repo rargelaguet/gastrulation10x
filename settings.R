@@ -72,6 +72,17 @@ opts$celltype.colors = c(
 	"Parietal_endoderm" = "#1A1A1A"
 )
 
+opts$stage.colors = c(
+	"E8.5" = "#440154FF",
+	"E8.25" = "#472D7BFF",
+	"E8.0" = "#3B528BFF",
+	"E7.75" = "#2C728EFF",
+	"E7.5" = "#21908CFF",
+	"E7.25" = "#27AD81FF",
+	"E7.0" = "#5DC863FF",
+	"E6.75" = "#AADC32FF",
+	"E6.5" = "#FDE725FF"
+)
 # opts$celltype.colors.2 = c(
 # 	"Epiblast" = "#635547",
 # 	"Primitive_Streak" = "#DABE99",
