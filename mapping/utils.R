@@ -181,7 +181,7 @@ getmode <- function(v, dist) {
   }
 }
 
-getHVGs <- function(sce, block, min.mean = 1e-3, p.value = 0.01, ...){
+getHVGs <- function(sce, block = NULL, min.mean = 1e-3, p.value = 0.01, ...){
   decomp <- modelGeneVar(sce, block=block, ...)
   decomp <- decomp[decomp$mean > min.mean,]
   decomp$FDR <- p.adjust(decomp$p.value, method = "fdr")

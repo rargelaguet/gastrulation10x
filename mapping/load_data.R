@@ -6,8 +6,8 @@
 
 # Update metadata
 sample_metadata <- sample_metadata %>%
-  .[,celltype:=stringr::str_replace_all(celltype,"/", "_")] %>%
-  .[,celltype:=stringr::str_replace_all(celltype,"_", " ")] %>%
+  # .[,celltype:=stringr::str_replace_all(celltype,"/", "_")] %>%
+  # .[,celltype:=stringr::str_replace_all(celltype,"_", " ")] %>%
   .[stage%in%args$stages & celltype%in%args$celltypes]
 
 metadata_query <- sample_metadata %>% .[sample%in%as.character(args$test_samples)]
