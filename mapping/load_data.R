@@ -5,10 +5,10 @@
 # opts$celltypes <- opts$celltypes %>% stringr::str_replace_all("/", "_") %>% stringr::str_replace_all("_", " ") 
 
 # Update metadata
-sample_metadata <- sample_metadata %>%
-  # .[,celltype:=stringr::str_replace_all(celltype,"/", "_")] %>%
-  # .[,celltype:=stringr::str_replace_all(celltype,"_", " ")] %>%
-  .[stage%in%args$stages & celltype%in%args$celltypes]
+sample_metadata <- sample_metadata %>% .[stage%in%args$stages]
+if (!is.null(args$celltypes)) {
+  sample_metadata <- sample_metadata %>%.[celltype%in%args$celltypes]
+}
 
 metadata_query <- sample_metadata %>% .[sample%in%as.character(args$test_samples)]
 metadata_atlas <- sample_metadata %>% .[!sample%in%as.character(args$test_samples)]

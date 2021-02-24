@@ -3,15 +3,16 @@
 #########
 
 source("/Users/ricard/gastrulation10x/settings.R")
-io$diff.dir <- paste0(io$basedir,"/results/differential")
-io$outdir <- paste0(io$basedir,"/results/differential/pdf"); dir.create(io$outdir, showWarnings = F)
+io$diff.dir <- paste0(io$basedir,"/results/differential/celltypes/all_stages")
+# io$outdir <- paste0(io$basedir,"/results/differential/celltypes/all_stages/pdf"); dir.create(io$outdir, showWarnings = F)
 
 #############
 ## Options ##
 #############
 
 # Define cell types
-opts$groups <- opts$celltypes.1
+# opts$groups <- opts$celltypes.1
+opts$groups <- c("Caudal_epiblast","NMP")
 
 ##################
 ## Load results ##
@@ -101,3 +102,6 @@ to.plot[groupB=="PGC" | groupA=="PGC"]
 
 foo <- dt[groupA=="Mixed_mesoderm" & groupB=="PGC" & sig==T] %>% setorder(-log_padj_fdr)
 foo <- dt[groupA=="Visceral_endoderm" & groupB=="Primitive_Streak" & sig==T] %>% setorder(-log_padj_fdr)
+
+
+dt[sig==T & abs(logFC)>1.5] %>% View

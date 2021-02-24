@@ -70,6 +70,7 @@ args <- p$parse_args(commandArgs(TRUE))
 #   "ExE_ectoderm"
 #   # "Parietal_endoderm"
 # )
+# args$celltypes <- NULL
 # args$test_samples <- c(
 #   # E7.5
 #   # "2",
@@ -102,7 +103,6 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 io$outdir <- paste0(io$basedir,"/results/mapping/stages")
 
 if (isTRUE(args$test)) print("Test mode activated...")
-# if (isNULL(args$stages)) 
 
 ###############
 ## Load data ##
@@ -132,5 +132,10 @@ mapping.dt <- mnn.fn(sce.all, sce.query, sce.atlas, genes = genes, npcs = args$n
 ## Save ##
 ##########
 
-fwrite(mapping.dt, sprintf("%s/mapping_mnn_%s_%s.txt.gz",io$outdir,paste(args$test_samples,collapse="_"),paste(args$celltypes,collapse="_")), sep="\t")
+if (!is.null(args$celltypes)) {
+  fwrite(mapping.dt, sprintf("%s/mapping_mnn_%s_%s.txt.gz",io$outdir,paste(args$test_samples,collapse="_"),paste(args$celltypes,collapse="_")), sep="\t")
+} else {
+  fwrite(mapping.dt, sprintf("%s/mapping_mnn_%s.txt.gz",io$outdir,paste(args$test_samples,collapse="_")), sep="\t")
+  
+}
 

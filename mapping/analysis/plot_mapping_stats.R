@@ -91,19 +91,22 @@ table(sample_metadata$stage)
 ################
 
 # Load mapping per sample (all cell types together)
-# mapping_dt <- opts$batches %>% map(function(i) {
-#   fread(sprintf("%s/mapping_mnn_%s.txt.gz",io$mapping.dir,i)) %>% .[,sample:=i]
-# }) %>% rbindlist %>% .[,class:="All together"]
+mapping_dt.1 <- opts$samples %>% map(function(i) {
+  fread(sprintf("%s/mapping_mnn_%s.txt.gz",io$mapping.dir,i)) %>% .[,sample:=i]
+}) %>% rbindlist %>% .[,class:="All together"] %>%
+  .[,c("celltype_mapped","celltype_score"):=NULL]
 
 # Load mapping per celltype (all cell types together)
-mapping_dt <- opts$samples %>% map(function(i) { 
+mapping_dt.2 <- opts$samples %>% map(function(i) { 
     opts$celltypes %>% map(function(j) {
       file <- sprintf("%s/mapping_mnn_%s_%s.txt.gz",io$mapping.dir,i,j)
       if (file.exists(file)) fread(file)# %>% .[,celltype:=j]
     }) %>% rbindlist %>% .[,sample:=i]
-  }) %>% rbindlist %>% .[,class:="Per cell type"] %>% .[,c("celltype_mapped","celltype_score"):=NULL]
+  }) %>% rbindlist %>% .[,class:="Per cell type"] %>% 
+  .[,c("celltype_mapped","celltype_score"):=NULL]
 
-mapping_dt %>% .[,stage_mapped:=factor(stage_mapped,levels=opts$stages)]
+mapping_dt <- rbind(mapping_dt.1,mapping_dt.2) %>% 
+  .[,stage_mapped:=factor(stage_mapped,levels=opts$stages)]
 
 ############################
 ## Plot stage assignments ##
@@ -118,8 +121,8 @@ for (i in opts$samples) {
     .[,sample_stage:=sprintf("Sample %s (%s)", i,stage)] %>%
     .[,.N,by=c("stage_mapped","sample_stage","class")]
   
-  # p_list[[i]] <- ggplot(to.plot, aes_string(x="stage_mapped", y="N")) +
-  ggplot(to.plot, aes_string(x="stage_mapped", y="N")) +
+  p_list[[i]] <- ggplot(to.plot, aes_string(x="stage_mapped", y="N")) +
+  # ggplot(to.plot, aes_string(x="stage_mapped", y="N")) +
     geom_bar(stat="identity", fill="gray70", color="black", position="dodge") +
     scale_x_discrete(drop=FALSE) + 
     facet_wrap(~sample_stage+class, scales="free_x") +

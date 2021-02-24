@@ -1,5 +1,5 @@
 ---
-title: "Dimensionality reduction using SingleCellExperiment"
+title: "Dimensionality reduction using scran + scater"
 ---
   
 ```{r load_modules, echo=FALSE, include=FALSE}
@@ -26,50 +26,51 @@ opts$stages <- c(
   "E7.5",
   "E7.75",
   "E8.0",
-  "E8.25",
-  "E8.5"
+  "E8.25"
+  # "E8.5",
   # "mixed_gastrulation"
 )
 
 opts$celltypes = c(
-	# "Epiblast"
-	# "Primitive_Streak",
-	# "Caudal_epiblast",
-	# "PGC",
-	# "Anterior_Primitive_Streak",
-	# "Notochord",
-	# "Def._endoderm",
-	# "Gut",
-	# "Nascent_mesoderm",
-	# "Mixed_mesoderm",
-	# "Intermediate_mesoderm",
-	# "Caudal_Mesoderm",
-	# "Paraxial_mesoderm",
-	# "Somitic_mesoderm",
-	# "Pharyngeal_mesoderm",
-	# "Cardiomyocytes",
-	# "Allantois",
-	# "ExE_mesoderm",
-	# "Mesenchyme",
-	# "Haematoendothelial_progenitors",
-	# "Endothelium",
-	# "Blood_progenitors_1",
-	# "Blood_progenitors_2",
-	# "Erythroid1",
-	# "Erythroid2",
-	# "Erythroid3",
-	# "NMP",
-	# "Rostral_neurectoderm",
-	# "Caudal_neurectoderm",
-	# "Neural_crest",
-	# "Forebrain_Midbrain_Hindbrain",
-	# "Spinal_cord",
-	# "Surface_ectoderm",
-	"Visceral_endoderm"
-	# "ExE_endoderm",
-	# "ExE_ectoderm",
-	# "Parietal_endoderm"
+	"Epiblast",
+	"Primitive_Streak",
+	"Caudal_epiblast",
+	"PGC",
+	"Anterior_Primitive_Streak",
+	"Notochord",
+	"Def._endoderm",
+	"Gut",
+	"Nascent_mesoderm",
+	"Mixed_mesoderm",
+	"Intermediate_mesoderm",
+	"Caudal_Mesoderm",
+	"Paraxial_mesoderm",
+	"Somitic_mesoderm",
+	"Pharyngeal_mesoderm",
+	"Cardiomyocytes",
+	"Allantois",
+	"ExE_mesoderm",
+	"Mesenchyme",
+	"Haematoendothelial_progenitors",
+	"Endothelium",
+	"Blood_progenitors_1",
+	"Blood_progenitors_2",
+	"Erythroid1",
+	"Erythroid2",
+	"Erythroid3",
+	"NMP",
+	"Rostral_neurectoderm",
+	"Caudal_neurectoderm",
+	"Neural_crest",
+	"Forebrain_Midbrain_Hindbrain",
+	"Spinal_cord",
+	"Surface_ectoderm",
+	"Visceral_endoderm",
+	"ExE_endoderm",
+	"ExE_ectoderm",
+	"Parietal_endoderm"
 )
+opts$batch_correction <- TRUE
 ```
 
 Update sample metadata
@@ -77,19 +78,23 @@ Update sample metadata
 sample_metadata <- sample_metadata %>%
   .[stage%in%opts$stages & celltype%in%opts$celltypes] %>%
   droplevels
-table(sample_metadata$stage)
-table(sample_metadata$celltype)
+# table(sample_metadata$stage)
+# table(sample_metadata$celltype)
 ```
 
 # Load data
 
 Load RNA expression data as SingleCellExperiment object
 ```{r load_data, echo=FALSE}
-sce <- readRDS(io$rna.sce)[,sample_metadata$cell]
+sce <- load_SingleCellExperiment(io$sce, 
+  cells = sample_metadata$cell, 
+  remove_non_expressed_genes = TRUE,
+  normalise = TRUE
+)
 dim(sce)
 ```
 
-Add sample metadata to SCE
+Add sample metadata to the colData of the SingleCellExperiment
 ```{r}
 colData(sce) <- sample_metadata %>% as.data.frame %>% tibble::column_to_rownames("cell") %>%
   .[colnames(sce),] %>% DataFrame()
@@ -119,8 +124,8 @@ Change gene names from ENSEMBL to symbols
 Select HVG
 ```{r}
 decomp <- modelGeneVar(sce)
-decomp <- decomp[decomp$mean > 0.001,]
-hvgs <- rownames(decomp)[decomp$p.value <= 0.01]
+decomp <- decomp[decomp$mean > 0.01,]
+hvgs <- rownames(decomp)[decomp$p.value <= 0.05]
 
 # Subset SingleCellExperiment
 sce_filt <- sce[hvgs,]
@@ -128,8 +133,8 @@ dim(sce_filt)
 ```
 
 ```{r}
-plot(decomp$mean, decomp$total, xlab="Mean log-expression", ylab="Variance")
-curve(metadata(decomp)$trend(x), col="blue", add=TRUE)
+# plot(decomp$mean, decomp$total, xlab="Mean log-expression", ylab="Variance")
+# curve(metadata(decomp)$trend(x), col="blue", add=TRUE)
 ```
 
 
@@ -146,7 +151,7 @@ Use gene markers as HVGs
 
 Regress out covariates
 ```{r}
-data <- scale(t(logcounts(sce_filt)), center = T, scale = F)
+# data <- scale(t(logcounts(sce_filt)), center = T, scale = F)
 # data_regressed <- apply(data, 2, function(x) {
 #   lm.out <- lm(formula=expr~covariate, data=data.frame(expr=x, covariate=factor(sce_filt$stage)));
 #   residuals <- lm.out[["residuals"]]+lm.out[["coefficients"]][1]
@@ -157,14 +162,32 @@ data <- scale(t(logcounts(sce_filt)), center = T, scale = F)
 
 Run PCA
 ```{r}
-npcs <- 5
-reducedDim(sce_filt, "PCA") <- irlba::prcomp_irlba(data, n=npcs)$x[,1:npcs]
+npcs <- 50
+# reducedDim(sce_filt, "PCA") <- irlba::prcomp_irlba(data, n=npcs)$x[,1:npcs]
+sce_filt <- runPCA(sce_filt, ncomponents = npcs, ntop=nrow(sce_filt))
+```
+
+```{r}
+cor(colMeans(assay(sce,"logcounts")), reducedDim(sce_filt, "PCA"))
 ```
 
 Plot PCA
 ```{r}
-plotPCA(sce_filt, colour_by="stage", ncomponents = c(1,2)) +
-  scale_fill_manual(values=opts$stage.colors)
+# plotPCA(sce_filt, colour_by="stage", ncomponents = c(1,2)) +
+#   scale_fill_manual(values=opts$stage.colors)
+```
+
+# Batch correction
+```{r}
+if (opts$batch_correction) {
+  if (length(unique(sce_filt$sample))>1) {
+    library(batchelor)
+    pca <- multiBatchPCA(sce_filt, batch=sce_filt$sample)
+    pca.corrected <- reducedMNN(pca)$corrected
+    colnames(pca.corrected) <- paste0("PC",1:ncol(pca.corrected))
+    reducedDim(sce_filt, "PCA") <- pca.corrected
+  }
+}
 ```
 
 # UMAP
@@ -172,10 +195,11 @@ plotPCA(sce_filt, colour_by="stage", ncomponents = c(1,2)) +
 Run UMAP
 ```{r}
 set.seed(42)
-sce_filt <- runUMAP(sce_filt, dimred="PCA")
-# sce_filt <- runUMAP(sce_filt, dimred="PCA", n_neighbors = 35, min_dist = 0.45)
+# sce_filt <- runUMAP(sce_filt, dimred="PCA")
+sce_filt <- runUMAP(sce_filt, dimred="PCA", n_neighbors = 35, min_dist = 0.45)
 reducedDim(sce, "UMAP") <- reducedDim(sce_filt, "UMAP") 
 ```
+
 
 Plot UMAP
 
@@ -186,15 +210,15 @@ to.plot <- reducedDim(sce_filt,"UMAP") %>% as.data.table %>%
 ```
 
 ```{r}
-p <- ggplot(to.plot, aes(x=V1, y=V2, fill=stage)) +
+p <- ggplot(to.plot, aes(x=V1, y=V2, fill=celltype)) +
   geom_point(size=1.5, shape=21, stroke=0.2) +
-  scale_fill_manual(values=opts$stage.colors) +
+  scale_fill_manual(values=opts$celltype.colors) +
   theme_classic() +
   theme(
     axis.title = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank(),
-    # legend.position="none",
+    legend.position="none",
     legend.title=element_blank()
   )
 
@@ -202,3 +226,36 @@ p <- ggplot(to.plot, aes(x=V1, y=V2, fill=stage)) +
 print(p)
 # dev.off()
 ```
+
+```{r}
+# to.plot <- to.plot[!celltype%in%c("ExE_ectoderm","Parietal_endoderm")]
+```
+
+```{r}
+for (i in unique(to.plot$stage)) {
+  
+  to.plot_i <- to.plot %>% copy %>%
+    .[,alpha:=1.0] %>%
+    .[stage!=i,c("celltype","alpha"):=list("None",0.25)]
+  
+  # p <- ggplot(to.plot_i, aes(x=V1, y=V2, fill=celltype, alpha=alpha)) +
+  p <- ggplot() +
+    ggrastr::geom_point_rast(aes(x=-V1, y=V2), size=1, color="grey", alpha=0.25, data=to.plot_i[stage!=i]) +
+    ggrastr::geom_point_rast(aes(x=-V1, y=V2, fill=celltype), size=1.5, shape=21, stroke=0.1, alpha=1.0, data=to.plot_i[stage==i]) +
+    # scale_size_manual(values = c("TRUE"=0.55, "FALSE"=0.15)) +
+    scale_fill_manual(values=opts$celltype.colors) +
+    theme_classic() +
+    theme(
+      axis.title = element_blank(),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      axis.line = element_blank(),
+      legend.position="none"
+    )
+  
+  pdf(sprintf("%s/umap_%s.pdf",io$outdir,i), width=5, height=5)
+  print(p)
+  dev.off()
+}
+```
+

@@ -92,9 +92,9 @@ for (i in opts$test_samples) {
   if (grepl("ricard",Sys.info()['nodename'])) {
     lsf <- ""
   } else {
-    lsf <- sprintf("bsub -M 40000 -n 1 -q research-rh74 -o %s/%s.txt", io$tmpdir, i)
+    lsf <- sprintf("bsub -M 70000 -n 1 -q research-rh74 -o %s/%s.txt", io$tmpdir, i)
   }
-  cmd <- sprintf("%s Rscript %s --test_samples %s --celltypes %s --stages %s --nPCs %d --k %d", lsf, io$mnn.script, i, paste(opts$celltypes, collapse=" "), paste(opts$stages, collapse=" "), opts$nPCs, opts$k)
+  cmd <- sprintf("%s Rscript %s --test_samples %s --stages %s --nPCs %d --k %d", lsf, io$mnn.script, i, paste(opts$stages, collapse=" "), opts$nPCs, opts$k)
   if (isTRUE(opts$test)) cmd <- paste0(cmd, " --test")
   system(cmd)
 }

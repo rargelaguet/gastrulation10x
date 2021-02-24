@@ -1,5 +1,3 @@
-##Test
-
 suppressPackageStartupMessages(library(data.table))
 suppressPackageStartupMessages(library(purrr))
 suppressPackageStartupMessages(library(ggplot2))
@@ -21,9 +19,9 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 
 io$metadata <- paste0(io$basedir,"/sample_metadata.txt.gz")
 # io$marker_genes.stringent <- paste0(io$basedir,"/results/marker_genes/marker_genes_stringent.tsv.gz")
-io$marker_genes <- paste0(io$basedir,"/results/marker_genes/marker_genes.txt.gz")
-io$average_expression_per_celltype <- paste0(io$basedir,"/results/marker_genes/avg_expr_per_celltype_and_gene.txt.gz")
-io$rna.sce <- paste0(io$basedir,"/processed/SingleCellExperiment.rds")
+io$marker_genes <- paste0(io$basedir,"/results/marker_genes/all_stages/marker_genes.txt.gz")
+io$average_expression_per_celltype <- paste0(io$basedir,"/results/marker_genes/all_stages/avg_expr_per_celltype_and_gene.txt.gz")
+io$sce <- paste0(io$basedir,"/processed/SingleCellExperiment.rds")
 io$cellassign.dir <- paste0(io$basedir,"/results/cellassign")
 
 #############
@@ -69,7 +67,12 @@ opts$celltype.colors = c(
 	"Visceral_endoderm" = "#F6BFCB",
 	"ExE_endoderm" = "#7F6874",
 	"ExE_ectoderm" = "#989898",
-	"Parietal_endoderm" = "#1A1A1A"
+	"Parietal_endoderm" = "#1A1A1A",
+	
+	# Additional
+	"Erythroid" = "#EF4E22",
+	"Blood_progenitors" = "#c9a997",
+	"Neurectoderm" = "#65A83E"
 )
 
 opts$stage.colors = c(
@@ -248,3 +251,22 @@ sample_metadata <- fread(io$metadata) %>%
   .[stripped==F & doublet==F] %>%
   .[,celltype:=factor(celltype, levels=names(opts$celltype.colors))]
   
+
+###############
+## Functions ##
+###############
+
+load_SingleCellExperiment <- function(file, normalise = FALSE, features = NULL, cells = NULL, remove_non_expressed_genes = FALSE) {
+  sce <- readRDS(file)
+  if (!is.null(cells)) sce <- sce[,cells]
+  if (!is.null(features)) sce <- sce[features,]
+  if (normalise) sce <- logNormCounts(sce)
+  if (remove_non_expressed_genes) sce <- sce[which(Matrix::rowMeans(counts(sce))>1e-4),]
+  return(sce)
+}
+
+matrix.please<-function(x) {
+  m<-as.matrix(x[,-1])
+  rownames(m)<-x[[1]]
+  m
+}

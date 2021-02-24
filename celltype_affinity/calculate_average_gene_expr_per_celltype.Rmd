@@ -1,0 +1,67 @@
+---
+title: "Calculate average gene expression per gene and cell type"
+---
+
+# Define settings
+
+Define I/O
+```{r define_io, echo=FALSE}
+source("/Users/ricard/gastrulation10x/settings.R")
+io$outdir <- paste0(io$basedir,"/results/pseudobulk_expression")
+```
+
+Define options
+```{r}
+opts$stages <- c(
+  "E6.5",
+  "E6.75",
+  "E7.0",
+  "E7.25",
+  "E7.5",
+  "E7.75",
+  "E8.0",
+  "E8.25",
+  "E8.5",
+  "mixed_gastrulation"
+)
+```
+
+# Load data
+
+Load RNA expression data
+```{r load_data, echo=FALSE}
+sce <- readRDS(io$rna.sce)[,sample_metadata$cell]
+sce$group <- sample_metadata$celltype
+```
+
+Load gene metadata
+```{r}
+gene_metadata <- fread(io$gene_metadata)
+```
+
+# Calculate average gene expression per group
+
+```{r}
+expr.dt <- unique(sce$group) %>% map(function(i) {
+  dt <- logcounts(sce[,sce$group==i]) %>% as.matrix %>% as.data.table(keep.rownames = T) %>%
+    melt(id.vars="rn") %>% setnames(c("ens_id","cell","value")) %>%
+    .[,.(mean_expr=round(mean(value),3)),by="ens_id"] %>%
+    .[,group:=i]
+  return(dt)
+}) %>% rbindlist
+```
+
+```{r}
+length(unique(expr.dt$ens_id))
+length(unique(expr.dt$group))
+```
+
+# Save
+
+```{r}
+to.save <- expr.dt %>%
+  merge(gene_metadata[,c("symbol","ens_id")], all.x=T) %>%
+  setnames("symbol","gene") %>%
+  setnames("group","celltype")
+fwrite(to.save, paste0(io$outdir,"/avg_expr_per_celltype_and_gene.txt.gz"), sep="\t")
+```
