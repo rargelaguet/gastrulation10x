@@ -1,12 +1,13 @@
-import numpy as np
+# import numpy as np
 import anndata as anndata
-import scipy as s
+# import scipy as s
 import scanpy as sc
-import matplotlib.pyplot as pl
-import seaborn
+# import matplotlib.pyplot as pl
+# import seaborn
 import pandas as pd
-import csv
+# import csv
 import os
+import dfply
 from re import search
 
 #########
@@ -35,6 +36,53 @@ io["anndata"] = io["basedir"] + "/processed/scanpy/Embryo10Xv6_genes_PCAbatchCor
 #############
 
 opts = {}
+
+opts["samples"] = [
+
+	# E6.5
+	"1", "5", "18",
+
+	# E6.75
+	"7",
+
+	# "E7.0"
+	"10", "14", "15", "30", "31", "32",
+
+	# E7.25
+	"23", "26", "27",
+
+	# E7.5
+	"2", "3", "4", "6", "19", "20",
+
+	# E7.75
+	"8", "9", "12", "13",
+
+	# E8.0
+	"16", "33", "34", "35",
+
+	# E8.25
+	"24", "25", "28",
+
+	# E8.5
+	"17", "29", "36", "37",
+
+	# mixed_gastrulation
+	"21", "22"
+]
+
+opts["stages"] = [
+	"E6.5",
+	"E6.75",
+	"E7.0",
+	"E7.25",
+	"E7.5",
+	"E7.75",
+	"E8.0",
+	"E8.25",
+	"E8.5",
+	"mixed_gastrulation"
+]
+
 
 opts["celltypes"] = [
 	"Epiblast",
@@ -132,27 +180,29 @@ opts["stages_colors"] = {
 	'mixed_gastrulation': "#A9A9A9"  
 	
 }
+
 ###############
 ## Load data ##
 ###############
 
 # Load AnnData
-adata = sc.read(io["anndata"])
+# adata = sc.read(io["anndata"])
 
 # Load sample metadata
-metadata = pd.read_table(io["metadata"], delimiter="\t", header=0)
+# metadata = pd.read_table(io["metadata"], delimiter="\t", header=0)
 
 # Add metadata to AnnData object
-assert metadata.shape[0] == adata.shape[0]
-metadata = metadata.set_index("cell").loc[adata.obs.index,:]
-adata.obs = metadata
+# assert metadata.shape[0] == adata.shape[0]
+# metadata = metadata.set_index("cell").loc[adata.obs.index,:]
+# adata.obs = metadata
 
 ################
 ## Set colors ##
 ################
 
-colPalette_celltypes = [opts["celltype_colors"][i.replace(" ","_")] for i in sorted(np.unique(adata.obs['celltype']))]
-adata.uns['celltype_colors'] = colPalette_celltypes
+# colPalette_celltypes = [opts["celltype_colors"][i.replace(" ","_")] for i in sorted(np.unique(adata.obs['celltype']))]
+# adata.uns['celltype_colors'] = colPalette_celltypes
 
-colPalette_stages = [opts["stages_colors"][i.replace(" ","_")] for i in sorted(np.unique(adata.obs['stage']))]
-adata.uns['stage_colors'] = colPalette_stages
+# colPalette_stages = [opts["stages_colors"][i.replace(" ","_")] for i in sorted(np.unique(adata.obs['stage']))]
+# adata.uns['stage_colors'] = colPalette_stages
+
