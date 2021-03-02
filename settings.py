@@ -29,7 +29,7 @@ else:
 io["metadata"] = io["basedir"] + "/sample_metadata.txt.gz"
 
 # doublets and poor quality cells already removed
-io["anndata"] = io["basedir"] + "/processed/scanpy/Embryo10Xv6_genes_PCAbatchCorrected_mergedAGA.h5ad"
+io["anndata"] = io["basedir"] + "/processed/scanpy/AnnData.h5ad"
 
 #############
 ## Options ##

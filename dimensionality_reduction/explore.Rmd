@@ -21,31 +21,31 @@ Define options
 opts$stages <- c(
   # "E6.5",
   # "E6.75",
-  # "E7.0",
-  # "E7.25",
-  "E7.5"
-  # "E7.75",
-  # "E8.0",
-  # "E8.25",
-  # "E8.5"
+  "E7.0",
+  "E7.25",
+  "E7.5",
+  "E7.75",
+  "E8.0",
+  "E8.25",
+  "E8.5"
   # "mixed_gastrulation"
 )
 
 opts$celltypes = c(
 	# "Epiblast",
 	# "Primitive_Streak"
-	# "Caudal_epiblast",
+	"Caudal_epiblast",
 	# "PGC",
 	# "Anterior_Primitive_Streak",
 	# "Notochord",
-	"Def._endoderm",
-	"Gut"
+	# "Def._endoderm",
+	# "Gut"
 	# "Nascent_mesoderm",
 	# "Mixed_mesoderm",
 	# "Intermediate_mesoderm",
-	# "Caudal_Mesoderm",
-	# "Paraxial_mesoderm",
-	# "Somitic_mesoderm",
+	"Caudal_Mesoderm",
+	"Paraxial_mesoderm",
+	"Somitic_mesoderm",
 	# "Pharyngeal_mesoderm",
 	# "Cardiomyocytes",
 	# "Allantois",
@@ -58,19 +58,18 @@ opts$celltypes = c(
 	# "Erythroid1",
 	# "Erythroid2",
 	# "Erythroid3",
-	# "NMP",
+	"NMP",
 	# "Rostral_neurectoderm"
 	# "Caudal_neurectoderm",
 	# "Neural_crest",
-	# "Forebrain_Midbrain_Hindbrain",
-	# "Spinal_cord",
+	"Forebrain_Midbrain_Hindbrain",
+	"Spinal_cord"
 	# "Surface_ectoderm",
 	# "Visceral_endoderm",
 	# "ExE_endoderm",
 	# "ExE_ectoderm",
 	# "Parietal_endoderm"
 )
-opts$remove.ExE.celltypes <- TRUE
 opts$batch_correction <- FALSE
 ```
 
@@ -79,12 +78,6 @@ Update sample metadata
 sample_metadata <- sample_metadata %>%
   .[stage%in%opts$stages & celltype%in%opts$celltypes] %>%
   droplevels
-
-if (opts$remove.ExE.celltypes) {
-  sample_metadata <- sample_metadata %>%
-    .[!celltype%in%c("Visceral_endoderm","ExE_endoderm","ExE_ectoderm","Parietal_endoderm")]
-}
-table(sample_metadata$sample)
 ```
 
 # Load data
@@ -150,21 +143,13 @@ reducedDim(sce, "PCA") <- reducedDim(sce_filt, "PCA")
 
 Plot PCA
 ```{r}
-p <- plotPCA(sce_filt, colour_by="stage", ncomponents = c(1,2)) +
+plotPCA(sce_filt, colour_by="stage", ncomponents = c(1,2)) +
   scale_colour_manual(values=opts$stage.colors)
-
-# pdf(sprintf("%s/nmp_vs_caudalepi_pca_by_stage.pdf",io$outdir), width=6, height=4)
-print(p)
-# dev.off()
 ```
 
 ```{r}
-p <- plotPCA(sce_filt, colour_by="celltype", ncomponents = c(1,2)) +
+plotPCA(sce_filt, colour_by="celltype", ncomponents = c(1,2)) +
   scale_colour_manual(values=opts$celltype.colors)
-
-# pdf(sprintf("%s/nmp_vs_caudalepi_pca_by_celltype.pdf",io$outdir), width=6, height=4)
-print(p)
-# dev.off()
 ```
 
 # Batch correction
@@ -186,7 +171,7 @@ Run UMAP
 ```{r}
 set.seed(42)
 # sce_filt <- runUMAP(sce_filt, dimred="PCA")
-sce_filt <- runUMAP(sce_filt, dimred="PCA", n_neighbors = 35, min_dist = 0.45)
+sce_filt <- runUMAP(sce_filt, dimred="PCA", n_neighbors = 35, min_dist = 0.25)
 reducedDim(sce, "UMAP") <- reducedDim(sce_filt, "UMAP") 
 ```
 
@@ -217,23 +202,21 @@ print(p)
 # dev.off()
 ```
 
-Plot marker genes
 ```{r}
-io$diff.dir <- paste0(io$basedir,"/results/differential/celltypes/all_stages")
-file <- sprintf("%s/Caudal_epiblast_vs_NMP.txt.gz", io$diff.dir)
-diff.dt <- fread(file) %>% .[sig==T & abs(logFC)>1.5]
-```
+p <- ggplot(to.plot, aes(x=V1, y=V2, fill=stage)) +
+  geom_point(size=1.5, shape=21, stroke=0.2) +
+  scale_fill_manual(values=opts$stage.colors) +
+  theme_classic() +
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position="top",
+    legend.title=element_blank()
+  )
 
-```{r}
-genes.to.plot <- diff.dt$gene[diff.dt$gene%in%rownames(sce)] 
-
-for (i in genes.to.plot) {
-  
-  p <- plotPCA(sce, colour_by=i, ncomponents = c(1,2))
-  
-  pdf(sprintf("%s/%s_nmp_vs_caudalepi.pdf",io$outdir,i), width=6, height=4)
-  print(p)
-  dev.off()
-}
+# pdf(paste0(io$outdir,"/rna_umap.pdf"), width=5, height=3, useDingbats = F)
+print(p)
+# dev.off()
 ```
 
