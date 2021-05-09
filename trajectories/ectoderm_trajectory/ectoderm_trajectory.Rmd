@@ -1,0 +1,251 @@
+---
+title: "Ectoderm trajectory"
+---
+  
+```{r load_modules, echo=FALSE, include=FALSE}
+library(SingleCellExperiment)
+library(scran)
+library(scater)
+library(destiny)
+```
+
+# Define settings
+
+Define I/O
+```{r define_io, echo=FALSE}
+source("/Users/ricard/gastrulation_multiome_10x/settings.R")
+io$outdir <- paste0(io$basedir,"/results/rna/trajectories/ectoderm_trajectory")
+```
+
+Define options
+```{r}
+# opts$celltypes = c(
+#   "Epiblast",
+#   "Rostral_neurectoderm",
+#   # "Neural_crest",
+#   "Forebrain_Midbrain_Hindbrain"
+#   # "Spinal_cord",
+#   # "Surface_ectoderm"
+# )
+
+opts$stage_celltype = c(
+  "E7.5_Epiblast",
+  "E7.5_Rostral_neurectoderm",
+  "E8.5_Rostral_neurectoderm",
+  "E8.5_Forebrain_Midbrain_Hindbrain"
+)
+
+opts$stage_celltype.colors <- c(
+  "E7.5_Epiblast" = "#635547",
+  "E7.5_Rostral_neurectoderm" = "#65A83E",
+  "E8.5_Rostral_neurectoderm" = "#4a941f",
+  "E8.5_Forebrain_Midbrain_Hindbrain" = "#647a4f"
+)
+
+opts$batch_correction <- FALSE
+```
+
+Update sample metadata
+```{r load_metadata, echo=FALSE}
+sample_metadata <- fread(io$metadata) %>%
+  .[pass_rnaQC==TRUE & doublet_call==FALSE] %>%
+  .[,stage_celltype:=paste(stage,celltype.mapped,sep="_")] %>%
+  # .[celltype.mapped%in%opts$celltypes & sample%in%opts$samples]
+  .[stage_celltype%in%opts$stage_celltype] %>%
+  .[,stage_celltype:=factor(stage_celltype,levels=opts$stage_celltype)]
+table(sample_metadata$stage_celltype)
+```
+
+# Load data
+
+Load RNA expression data as SingleCellExperiment object
+```{r load_data, echo=FALSE}
+sce <- load_SingleCellExperiment(
+  file = io$sce, 
+  normalise = TRUE, 
+  cells = sample_metadata$cell, 
+  remove_non_expressed_genes = TRUE
+)
+dim(sce)
+```
+
+Add sample metadata to the colData of the SingleCellExperiment
+```{r}
+colData(sce) <- sample_metadata %>% as.data.frame %>% tibble::column_to_rownames("cell") %>%
+  .[colnames(sce),] %>% DataFrame()
+```
+
+# Parse data
+
+Select HVG
+```{r}
+decomp <- modelGeneVar(sce)
+decomp <- decomp[decomp$mean > 0.01,]
+hvgs <- rownames(decomp)[decomp$p.value <= 0.05]
+
+# Subset SingleCellExperiment
+sce_filt <- sce[hvgs,]
+dim(sce_filt)
+```
+
+Save HVGs
+```{r}
+hvgs.to.save <- rownames(decomp)[decomp$p.value <= 0.01]
+saveRDS(hvgs.to.save, paste0(io$outdir,"/hvgs.rds"))
+```
+
+Create data.table for downstream analysis
+```{r}
+rna_dt <- as.matrix(logcounts(sce_filt)) %>% t %>% 
+  # scale(center = FALSE, scale = TRUE) %>%
+  as.data.table(keep.rownames="cell") %>% 
+  melt(id.vars="cell", value.name="expr", variable.name="gene")
+```
+
+
+# PCA
+
+```{r}
+if (opts$batch_correction) {
+  if (length(unique(sce_filt$sample))>1) {
+    library(batchelor)
+    pca <- multiBatchPCA(sce_filt, batch=sce_filt$sample)
+    pca.corrected <- reducedMNN(pca)$corrected
+    colnames(pca.corrected) <- paste0("PC",1:ncol(pca.corrected))
+    reducedDim(sce_filt, "PCA") <- pca.corrected
+  }
+} else {
+  sce_filt <- runPCA(sce_filt, ncomponents = 5, ntop=nrow(sce_filt))
+}
+```
+
+Plot PCA
+```{r message=FALSE}
+p <- plotPCA(sce_filt, colour_by="celltype.mapped", ncomponents = c(1,2)) +
+  scale_colour_manual(values=opts$celltype.colors)
+
+pdf(sprintf("%s/pca.pdf",io$outdir), width=8, height=5)
+print(p)
+dev.off()
+```
+
+# UMAP
+
+Run UMAP
+```{r}
+set.seed(42)
+sce_filt <- runUMAP(sce_filt, dimred="PCA", n_neighbors = 25, min_dist = 0.35)
+```
+
+Plot UMAP
+```{r message=FALSE}
+p <- plotUMAP(sce_filt, colour_by="celltype.mapped", ncomponents = c(1,2)) +
+  scale_colour_manual(values=opts$celltype.colors)
+
+pdf(sprintf("%s/umap.pdf",io$outdir), width=8, height=5)
+print(p)
+dev.off()
+```
+
+# Diffusion pseudotime
+
+Calculate Diffusion map
+```{r}
+set.seed(42)
+dm <- DiffusionMap(sce_filt, n_pcs=2)
+```
+
+Add to the SingleCellExperiment object
+```{r}
+reducedDim(sce_filt, "DiffusionMap") <- dm@eigenvectors[,c(1,2)]
+```
+
+Plot Diffusion map
+```{r message=FALSE}
+p <- plotReducedDim(sce_filt, dimred = "DiffusionMap", colour_by="celltype.mapped", ncomponents = c(1,2)) +
+  scale_colour_manual(values=opts$celltype.colors)
+# plotReducedDim(sce_filt, dimred = "DiffusionMap", colour_by="stage_celltype", ncomponents = c(1,2)) +
+#   scale_colour_manual(values=opts$stage_celltype.colors)
+
+pdf(sprintf("%s/diffusion_map.pdf",io$outdir), width=8, height=5)
+print(p)
+dev.off()
+```
+
+Calculate ranks
+```{r}
+pseudotime.dt <- data.table(
+  cell = colnames(sce_filt),
+  V1 = -eigenvectors(dm)[,1]
+) %>% setorder(V1) %>% .[,rank_V1:=1:.N]
+```
+
+Load precomputed pseudotime
+```{r}
+# pseudotime.dt <- fread(paste0(io$outdir,"/ectoderm_trajectory.txt.gz"))
+```
+
+Boxplots of pseudotime values per celltype
+
+```{r}
+to.plot1 <- pseudotime.dt %>%
+  .[,c("cell","V1","rank_V1")] %>% 
+  merge(sample_metadata[,c("cell","celltype.mapped","stage")], by="cell")
+
+p <- ggboxplot(to.plot1, x="celltype.mapped", y="V1", fill="celltype.mapped", outlier.shape=NA) +
+  facet_wrap(~stage, nrow=1, scales="free_x") +
+  scale_fill_manual(values=opts$celltype.colors) +
+  labs(x="", y="") +
+  theme_classic() +
+  guides(x = guide_axis(angle = 90)) +
+  theme(
+    legend.position = "right",
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+
+pdf(sprintf("%s/pseudotime_boxplot_celltype.pdf",io$outdir), width=8, height=5)
+print(p)
+dev.off()
+```
+
+Scatterplots of pseudotime values versus expression of marker genes
+
+```{r}
+diff.dt <- fread("/Users/ricard/data/gastrulation10x/results/differential/celltypes/all_stages/Epiblast_vs_Forebrain_Midbrain_Hindbrain.txt.gz")
+
+genes.to.plot <- diff.dt %>%
+  .[abs(logFC)>2 & sig==T,gene] %>%
+  head(n=28)
+
+to.plot2 <- to.plot1 %>% merge(rna_dt[gene%in%genes.to.plot],by="cell")
+```
+
+
+```{r}
+p <- ggplot(to.plot2, aes(x=V1, y=expr)) +
+  geom_point(aes(fill=expr), size=1, shape=21, stroke=0.1, alpha=0.5) +
+  stat_smooth(aes(fill=expr), method="loess", color="black", alpha=0.90, span=0.5) +
+  geom_rug(aes(color=celltype.mapped), sides="b") +
+  viridis::scale_fill_viridis() +
+  scale_color_manual(values=opts$celltype.colors) +
+  facet_wrap(~gene, scales="free_y") +
+  labs(x="Pseudotime", y="Gene expression") +
+  theme_classic() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position="none"
+  )
+
+pdf(sprintf("%s/pseudotime_vs_expression.pdf",io$outdir), width=10, height=8)
+print(p)
+dev.off()
+```
+
+Save coordinates
+```{r}
+fwrite(pseudotime.dt, paste0(io$outdir,"/ectoderm_trajectory.txt.gz"))
+```
+

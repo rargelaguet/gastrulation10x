@@ -6,6 +6,7 @@ title: "Dimensionality reduction using scran + scater"
 library(SingleCellExperiment)
 library(scran)
 library(scater)
+library(batchelor)
 ```
 
 # Define settings
@@ -19,58 +20,58 @@ io$outdir <- paste0(io$basedir,"/results/dimensionality_reduction")
 Define options
 ```{r}
 opts$stages <- c(
-  "E6.5",
-  "E6.75",
-  "E7.0",
-  "E7.25",
-  "E7.5",
-  "E7.75",
+  # "E6.5",
+  # "E6.75",
+  # "E7.0",
+  # "E7.25",
+  # "E7.5",
+  # "E7.75",
   "E8.0",
-  "E8.25"
-  # "E8.5",
+  "E8.25",
+  "E8.5"
   # "mixed_gastrulation"
 )
 
 opts$celltypes = c(
-	"Epiblast",
-	"Primitive_Streak",
-	"Caudal_epiblast",
-	"PGC",
-	"Anterior_Primitive_Streak",
-	"Notochord",
-	"Def._endoderm",
-	"Gut",
-	"Nascent_mesoderm",
-	"Mixed_mesoderm",
-	"Intermediate_mesoderm",
-	"Caudal_Mesoderm",
-	"Paraxial_mesoderm",
-	"Somitic_mesoderm",
-	"Pharyngeal_mesoderm",
-	"Cardiomyocytes",
-	"Allantois",
-	"ExE_mesoderm",
-	"Mesenchyme",
-	"Haematoendothelial_progenitors",
-	"Endothelium",
-	"Blood_progenitors_1",
-	"Blood_progenitors_2",
-	"Erythroid1",
-	"Erythroid2",
-	"Erythroid3",
-	"NMP",
-	"Rostral_neurectoderm",
-	"Caudal_neurectoderm",
-	"Neural_crest",
-	"Forebrain_Midbrain_Hindbrain",
-	"Spinal_cord",
-	"Surface_ectoderm",
-	"Visceral_endoderm",
-	"ExE_endoderm",
-	"ExE_ectoderm",
-	"Parietal_endoderm"
+   # "Epiblast",
+   # "Primitive_Streak",
+   "Caudal_epiblast",
+   # "PGC",
+   # "Anterior_Primitive_Streak",
+   # "Notochord",
+   # "Def._endoderm",
+   # "Gut",
+   # "Nascent_mesoderm",
+   # "Mixed_mesoderm",
+   # "Intermediate_mesoderm",
+   "Caudal_Mesoderm",
+   "Paraxial_mesoderm",
+   "Somitic_mesoderm",
+   # "Pharyngeal_mesoderm",
+   # "Cardiomyocytes",
+   # "Allantois",
+   # "ExE_mesoderm",
+   # "Mesenchyme",
+   # "Haematoendothelial_progenitors",
+   # "Endothelium",
+   # "Blood_progenitors_1",
+   # "Blood_progenitors_2",
+   # "Erythroid1",
+   # "Erythroid2",
+   # "Erythroid3",
+   "NMP",
+   # "Rostral_neurectoderm",
+   # "Caudal_neurectoderm",
+   # "Neural_crest",
+   "Forebrain_Midbrain_Hindbrain",
+   "Spinal_cord"
+   # "Surface_ectoderm"
+   # "Visceral_endoderm",
+   # "ExE_endoderm",
+   # "ExE_ectoderm",
+   # "Parietal_endoderm"
 )
-opts$batch_correction <- TRUE
+opts$batch_correction <- FALSE
 ```
 
 Update sample metadata
@@ -123,7 +124,11 @@ Change gene names from ENSEMBL to symbols
 
 Select HVG
 ```{r}
-decomp <- modelGeneVar(sce)
+if (opts$batch_correction) {
+  decomp <- modelGeneVar(sce, block=sce$stage)
+} else {
+  decomp <- modelGeneVar(sce)
+}
 decomp <- decomp[decomp$mean > 0.01,]
 hvgs <- rownames(decomp)[decomp$p.value <= 0.05]
 
@@ -131,12 +136,6 @@ hvgs <- rownames(decomp)[decomp$p.value <= 0.05]
 sce_filt <- sce[hvgs,]
 dim(sce_filt)
 ```
-
-```{r}
-# plot(decomp$mean, decomp$total, xlab="Mean log-expression", ylab="Variance")
-# curve(metadata(decomp)$trend(x), col="blue", add=TRUE)
-```
-
 
 Use gene markers as HVGs
 ```{r}
@@ -160,34 +159,35 @@ Regress out covariates
 
 # PCA
 
-Run PCA
 ```{r}
-npcs <- 50
-# reducedDim(sce_filt, "PCA") <- irlba::prcomp_irlba(data, n=npcs)$x[,1:npcs]
-sce_filt <- runPCA(sce_filt, ncomponents = npcs, ntop=nrow(sce_filt))
+npcs <- 15
+
+if (opts$batch_correction) {
+  # pca <- multiBatchPCA(sce_filt, batch=sce_filt$sample)
+  pca <- multiBatchPCA(sce_filt, d = npcs, batch=sce_filt$stage)
+  pca.corrected <- reducedMNN(pca)$corrected
+  colnames(pca.corrected) <- paste0("PC",1:ncol(pca.corrected))
+  pca.corrected <- pca.corrected[match(colnames(sce_filt),rownames(pca.corrected)),]
+  reducedDim(sce_filt, "PCA") <- pca.corrected
+} else {
+  # reducedDim(sce_filt, "PCA") <- irlba::prcomp_irlba(data, n=npcs)$x[,1:npcs]
+  sce_filt <- runPCA(sce_filt, ncomponents = npcs, ntop=nrow(sce_filt))  
+}
 ```
 
 ```{r}
-cor(colMeans(assay(sce,"logcounts")), reducedDim(sce_filt, "PCA"))
+# all(rownames(pca.corrected2) == rownames(reducedDim(sce_filt, "PCA")))
+# all(rownames(pca.corrected2) == colnames(sce_filt))
 ```
 
 Plot PCA
 ```{r}
-# plotPCA(sce_filt, colour_by="stage", ncomponents = c(1,2)) +
-#   scale_fill_manual(values=opts$stage.colors)
+plotPCA(sce_filt, colour_by="celltype", ncomponents = c(1,2)) +
+  scale_color_manual(values=opts$celltype.colors)
 ```
 
-# Batch correction
 ```{r}
-if (opts$batch_correction) {
-  if (length(unique(sce_filt$sample))>1) {
-    library(batchelor)
-    pca <- multiBatchPCA(sce_filt, batch=sce_filt$sample)
-    pca.corrected <- reducedMNN(pca)$corrected
-    colnames(pca.corrected) <- paste0("PC",1:ncol(pca.corrected))
-    reducedDim(sce_filt, "PCA") <- pca.corrected
-  }
-}
+# cor(colMeans(assay(sce,"logcounts")), reducedDim(sce_filt, "PCA"))
 ```
 
 # UMAP
@@ -195,21 +195,16 @@ if (opts$batch_correction) {
 Run UMAP
 ```{r}
 set.seed(42)
-# sce_filt <- runUMAP(sce_filt, dimred="PCA")
 sce_filt <- runUMAP(sce_filt, dimred="PCA", n_neighbors = 35, min_dist = 0.45)
 reducedDim(sce, "UMAP") <- reducedDim(sce_filt, "UMAP") 
 ```
 
-
 Plot UMAP
-
 ```{r}
 to.plot <- reducedDim(sce_filt,"UMAP") %>% as.data.table %>% 
   .[,cell:=colnames(sce_filt)] %>%
     merge(sample_metadata, by="cell")
-```
 
-```{r}
 p <- ggplot(to.plot, aes(x=V1, y=V2, fill=celltype)) +
   geom_point(size=1.5, shape=21, stroke=0.2) +
   scale_fill_manual(values=opts$celltype.colors) +
@@ -231,6 +226,10 @@ print(p)
 # to.plot <- to.plot[!celltype%in%c("ExE_ectoderm","Parietal_endoderm")]
 ```
 
+
+
+# Explore
+
 ```{r}
 for (i in unique(to.plot$stage)) {
   
@@ -242,6 +241,7 @@ for (i in unique(to.plot$stage)) {
   p <- ggplot() +
     ggrastr::geom_point_rast(aes(x=-V1, y=V2), size=1, color="grey", alpha=0.25, data=to.plot_i[stage!=i]) +
     ggrastr::geom_point_rast(aes(x=-V1, y=V2, fill=celltype), size=1.5, shape=21, stroke=0.1, alpha=1.0, data=to.plot_i[stage==i]) +
+    labs(title=i) +
     # scale_size_manual(values = c("TRUE"=0.55, "FALSE"=0.15)) +
     scale_fill_manual(values=opts$celltype.colors) +
     theme_classic() +
@@ -253,9 +253,9 @@ for (i in unique(to.plot$stage)) {
       legend.position="none"
     )
   
-  pdf(sprintf("%s/umap_%s.pdf",io$outdir,i), width=5, height=5)
+  # pdf(sprintf("%s/umap_%s.pdf",io$outdir,i), width=5, height=5)
   print(p)
-  dev.off()
+  # dev.off()
 }
 ```
 
