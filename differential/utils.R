@@ -4,12 +4,11 @@
 # - groups: the names of the two groups
 # - test: one of "edgeR","t-test","wilcoxon".
 # - min_detection_rate_per_group: minimum detection rate per group
-doDiffExpr <- function(sce, groups, test=c("edgeR","t-test","wilcoxon"), min_detection_rate_per_group = 0.50) {
+doDiffExpr <- function(sce, groups, test = "edgeR", min_detection_rate_per_group = 0.50) {
     
   # Sanity checks
   if (!is(sce, "SingleCellExperiment")) stop("'sce' has to be an instance of SingleCellExperiment")
   stopifnot(length(groups)==2)
-  test <- match.arg(test)
 
   # Filter genes by detection rate per group
   cdr_A <- rowMeans(logcounts(sce[,sce$group==groups[1]])>0) >= min_detection_rate_per_group
@@ -31,12 +30,6 @@ doDiffExpr <- function(sce, groups, test=c("edgeR","t-test","wilcoxon"), min_det
   return(out)
 }
 
-
-
-.t_test <- function(sce) {
-  # left.result1 <- wilcox.test(host.vals, target.vals, alternative="less", mu=-lfc, exact=FALSE)
-  # expect_equal(p.adjust(pval, method="BH"), curres$FDR)
-}
 
 .edgeR <- function(sce) {
   
@@ -106,9 +99,3 @@ gg_volcano_plot <- function(tmp, top_genes=10, xlim=NULL, ylim=NULL) {
   return(p)
 }
 
-
-matrix.please<-function(x) {
-  m<-as.matrix(x[,-1])
-  rownames(m)<-x[[1]]
-  m
-}

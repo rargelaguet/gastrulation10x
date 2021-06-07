@@ -1,5 +1,6 @@
 library(muscat)
 library(DESeq2)
+library(SingleCellExperiment)
 
 #####################
 ## Define settings ##
@@ -18,23 +19,13 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 # I/O
 io$outdir <- paste0(io$basedir,"/results/pseudobulk")
 
-# Options
-opts$samples <- c(
-  "E7.5_rep1",
-  "E7.5_rep2",
-  "E8.0_rep1",
-  "E8.0_rep2",
-  "E8.5_rep1",
-  "E8.5_rep2"
-)
-
 ############################
 ## Update sample metadata ##
 ############################
 
 # Load cell metadata
-meta_atlas <- sample_metadata %>%
-  .[stage%in%opts$stages]
+# sample_metadata <- sample_metadata %>%
+#   .[stage%in%opts$stages]
 
 ###############################
 ## Load SingleCellExperiment ##
@@ -71,16 +62,26 @@ dds <- DESeqDataSet(sce_pseudobulk, design=~1)
 # yielding a matrix of values which are now approximately homoskedastic 
 dds <- varianceStabilizingTransformation(dds)
 
-logcounts(sce_pseudobulk) <- assay(dds)
+stopifnot(rownames(dds)==rownames(sce_pseudobulk))
+stopifnot(colnames(dds)==colnames(sce_pseudobulk))
+
+# logcounts(sce_pseudobulk) <- assay(dds)
+assays(sce_pseudobulk)[["logcounts"]] <- assay(dds)
+assays(sce_pseudobulk) <- assays(sce_pseudobulk)[c("logcounts","counts")]
 
 ###################
 ## Sanity checks ##
 ###################
 
-# cor(
-#   colMeans(logcounts(sce_pseudobulk)),
-#   metadata(sce_pseudobulk)$n_cells
-# )
+cor(
+  colMeans(logcounts(sce_pseudobulk)),
+  metadata(sce_pseudobulk)$n_cells
+)
+
+cor(
+  colMeans(counts(sce_pseudobulk)),
+  metadata(sce_pseudobulk)$n_cells
+)
 
 ##########
 ## Save ##

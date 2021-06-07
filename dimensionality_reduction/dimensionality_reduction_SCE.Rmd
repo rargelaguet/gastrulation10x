@@ -20,56 +20,56 @@ io$outdir <- paste0(io$basedir,"/results/dimensionality_reduction")
 Define options
 ```{r}
 opts$stages <- c(
-  # "E6.5",
-  # "E6.75",
-  # "E7.0",
-  # "E7.25",
-  # "E7.5",
-  # "E7.75",
+  "E6.5",
+  "E6.75",
+  "E7.0",
+  "E7.25",
+  "E7.5",
+  "E7.75",
   "E8.0",
   "E8.25",
-  "E8.5"
-  # "mixed_gastrulation"
+  "E8.5",
+  "mixed_gastrulation"
 )
 
 opts$celltypes = c(
-   # "Epiblast",
-   # "Primitive_Streak",
+   "Epiblast",
+   "Primitive_Streak",
    "Caudal_epiblast",
-   # "PGC",
-   # "Anterior_Primitive_Streak",
-   # "Notochord",
-   # "Def._endoderm",
-   # "Gut",
-   # "Nascent_mesoderm",
-   # "Mixed_mesoderm",
-   # "Intermediate_mesoderm",
+   "PGC",
+   "Anterior_Primitive_Streak",
+   "Notochord",
+   "Def._endoderm",
+   "Gut",
+   "Nascent_mesoderm",
+   "Mixed_mesoderm",
+   "Intermediate_mesoderm",
    "Caudal_Mesoderm",
    "Paraxial_mesoderm",
    "Somitic_mesoderm",
-   # "Pharyngeal_mesoderm",
-   # "Cardiomyocytes",
-   # "Allantois",
-   # "ExE_mesoderm",
-   # "Mesenchyme",
-   # "Haematoendothelial_progenitors",
-   # "Endothelium",
-   # "Blood_progenitors_1",
-   # "Blood_progenitors_2",
-   # "Erythroid1",
-   # "Erythroid2",
-   # "Erythroid3",
+   "Pharyngeal_mesoderm",
+   "Cardiomyocytes",
+   "Allantois",
+   "ExE_mesoderm",
+   "Mesenchyme",
+   "Haematoendothelial_progenitors",
+   "Endothelium",
+   "Blood_progenitors_1",
+   "Blood_progenitors_2",
+   "Erythroid1",
+   "Erythroid2",
+   "Erythroid3",
    "NMP",
-   # "Rostral_neurectoderm",
-   # "Caudal_neurectoderm",
-   # "Neural_crest",
+   "Rostral_neurectoderm",
+   "Caudal_neurectoderm",
+   "Neural_crest",
    "Forebrain_Midbrain_Hindbrain",
-   "Spinal_cord"
-   # "Surface_ectoderm"
-   # "Visceral_endoderm",
-   # "ExE_endoderm",
-   # "ExE_ectoderm",
-   # "Parietal_endoderm"
+   "Spinal_cord",
+   "Surface_ectoderm",
+   "Visceral_endoderm",
+   "ExE_endoderm",
+   "ExE_ectoderm",
+   "Parietal_endoderm"
 )
 opts$batch_correction <- FALSE
 ```
@@ -175,6 +175,7 @@ if (opts$batch_correction) {
 }
 ```
 
+
 ```{r}
 # all(rownames(pca.corrected2) == rownames(reducedDim(sce_filt, "PCA")))
 # all(rownames(pca.corrected2) == colnames(sce_filt))
@@ -259,3 +260,62 @@ for (i in unique(to.plot$stage)) {
 }
 ```
 
+
+# TEST
+
+Load batch-corrected PCs
+```{r}
+pca.mtx <- readRDS("/Users/ricard/data/gastrulation10x/original/corrected_pcas.rds")[["all"]]
+```
+
+```{r}
+to.plot <- pca.mtx %>% as.data.table %>% 
+  .[,cell:=rownames(pca.mtx)] %>%
+    merge(sample_metadata, by="cell")
+
+p <- ggplot(to.plot, aes(x=PC3, y=PC4, fill=celltype)) +
+  geom_point(size=1.5, shape=21, stroke=0.2) +
+  scale_fill_manual(values=opts$celltype.colors) +
+  theme_classic() +
+  # labs(x="PC3", y="PC2") +
+  theme(
+    # axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position="none",
+    legend.title=element_blank()
+  )
+
+# pdf(paste0(io$outdir,"/rna_umap.pdf"), width=5, height=3, useDingbats = F)
+print(p)
+# dev.off()
+```
+
+t-SNE
+```{r}
+tsne.mtx <- Rtsne::Rtsne(pca.mtx, check_duplicates = FALSE, pca = FALSE)
+```
+
+
+```{r}
+to.plot <- tsne.mtx$Y %>% as.data.table %>% 
+  .[,cell:=rownames(pca.mtx)] %>%
+    merge(sample_metadata[,c("cell","celltype")], by="cell")
+
+p <- ggplot(to.plot, aes(x=V1, y=V2, fill=celltype)) +
+  geom_point(size=1.5, shape=21, stroke=0.2) +
+  scale_fill_manual(values=opts$celltype.colors) +
+  theme_classic() +
+  labs(x="tSNE-1", y="tSNE-2") +
+  theme(
+    # axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position="none",
+    legend.title=element_blank()
+  )
+
+# pdf(paste0(io$outdir,"/rna_umap.pdf"), width=5, height=3, useDingbats = F)
+print(p)
+# dev.off()
+```

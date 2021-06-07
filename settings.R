@@ -24,6 +24,9 @@ io$average_expression_per_celltype <- paste0(io$basedir,"/results/marker_genes/a
 io$sce <- paste0(io$basedir,"/processed/SingleCellExperiment.rds")
 io$cellassign.dir <- paste0(io$basedir,"/results/cellassign")
 
+io$paga.connectivity <- paste0(io$basedir,"/results/paga/paga_connectivity.csv")
+io$paga.coordinates <- paste0(io$basedir,"/results/paga/paga_coordinates.csv")
+
 #############
 ## Options ##
 #############
