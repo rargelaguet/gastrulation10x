@@ -1,13 +1,30 @@
-###########################################################
-## Script to do differential expression between lineages ##
-###########################################################
 
-suppressMessages(library(SingleCellExperiment))
 suppressMessages(library(scater))
 suppressMessages(library(edgeR))
 suppressMessages(library(argparse))
 
+#####################
+## Define settings ##
+#####################
+
+if (grepl("ricard",Sys.info()['nodename'])) {
+  source("/Users/ricard/gastrulation10x/settings.R")
+  source("/Users/ricard/gastrulation10x/utils.R")
+  source("/Users/ricard/gastrulation10x/differential/utils.R")
+} else if (grepl("ebi",Sys.info()['nodename'])) {
+  source("/homes/ricard/gastrulation10x/settings.R")
+  source("/homes/ricard/gastrulation10x/utils.R")
+  source("/homes/ricard/gastrulation10x/differential/utils.R")
+} else {
+  stop("Computer not recognised")
+}
+
+io$TFs <- paste0(io$basedir,"/results/differential/celltypes/TFs/TFs.txt")
+
+################################
 ## Initialize argument parser ##
+################################
+
 p <- ArgumentParser(description='')
 p$add_argument('--groupA',    type="character",    help='group A')
 p$add_argument('--groupB',    type="character",    help='group B')
@@ -23,30 +40,13 @@ args$outfile <- c("/Users/ricard/data/gastrulation10x/results/differential/TFs/f
 args$test_mode <- FALSE
 ## END TEST
 
-
-#########
-## I/O ##
-#########
-
-if (grepl("ricard",Sys.info()['nodename'])) {
-  source("/Users/ricard/gastrulation10x/settings.R")
-  source("/Users/ricard/gastrulation10x/utils.R")
-  source("/Users/ricard/gastrulation10x/differential/utils.R")
-} else if (grepl("ebi",Sys.info()['nodename'])) {
-  source("/homes/ricard/gastrulation10x/settings.R")
-  source("/homes/ricard/gastrulation10x/utils.R")
-  source("/homes/ricard/gastrulation10x/differential/utils.R")
-} else {
-  stop("Computer not recognised")
-}
+#############
+## Options ##
+#############
 
 # Sanity checks
 stopifnot(args$groupA%in%opts$celltypes)
 stopifnot(args$groupB%in%opts$celltypes)
-
-#############
-## Options ##
-#############
 
 # Define groups
 opts$groups <- c(args$groupA,args$groupB)
@@ -84,12 +84,11 @@ table(sample_metadata$group)
 ###############################
 
 gene_metadata <- fread(io$gene_metadata) %>%
-  .[ens_id%in%rownames(sce)] %>%
   .[,c("symbol","ens_id")] %>% 
   setnames("symbol","gene")
 
 # Load TF information
-opts$TFs <- fread(paste0(io$basedir,"/results/differential/celltypes/TFs/TFs.txt"))[[1]] %>% stringr::str_to_title()
+opts$TFs <- fread(io$TFs)[[1]] %>% stringr::str_to_title()
 TF_metadata <- gene_metadata[gene%in%opts$TFs]
 
 
@@ -103,6 +102,7 @@ sce$group <- sample_metadata$group
 
 # Subset SingleCellExperiment to TFs
 sce <- sce[rownames(sce)%in%TF_metadata$ens_id]
+TF_metadata <- TF_metadata[ens_id%in%rownames(sce)]
 
 ################
 ## Parse data ##
@@ -122,7 +122,7 @@ cdr.dt <- data.table(
 
 out <- doDiffExpr(sce, groups = opts$groups, test = "edgeR", min_detection_rate_per_group = opts$min_detection_rate_per_group) %>%
   merge(cdr.dt, all.y=T, by="ens_id") %>%
-  merge(gene_metadata, all.y=T, by="ens_id") %>%
+  merge(TF_metadata, all.y=T, by="ens_id") %>%
  .[, sig := (padj_fdr<=opts$threshold_fdr & abs(logFC)>=opts$min.logFC)] %>%
   # setorderv(c("sig","padj_fdr"), na.last=T)
   setorder(-sig, padj_fdr, na.last=T)
