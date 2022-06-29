@@ -1,14 +1,10 @@
-suppressPackageStartupMessages(library(SingleCellExperiment))
+here::i_am("plot_individual_genes/plot_individual_genes.R")
+
+source(here::here("settings.R"))
 
 #####################
 ## Define settings ##
 #####################
-
-if (grepl("ricard",Sys.info()['nodename'])) {
-  source("/Users/ricard/gastrulation10x/settings.R")
-} else if (grepl("ebi",Sys.info()['nodename'])) {
-  source("/homes/ricard/gastrulation10x/settings.R")
-}
 
 ## I/O ##
 
@@ -84,18 +80,11 @@ table(sample_metadata$celltype)
 ###############
 
 # Load SingleCellExperiment object
-sce <- readRDS(io$rna.sce)[,as.character(sample_metadata$cell)]
-
-# Remove genes that are not expressed
-sce <- sce[rowMeans(counts(sce))>0,]
+sce <- readRDS(io$sce)[,sample_metadata$cell]
 
 # Load gene metadata
 gene_metadata <- fread(io$gene_metadata) %>%
   .[ens_id%in%rownames(sce)]
-
-################
-## Parse data ##
-################
 
 # Rename genes
 foo <- gene_metadata$symbol

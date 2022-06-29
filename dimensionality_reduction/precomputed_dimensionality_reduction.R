@@ -1,4 +1,6 @@
-source("/Users/ricard/gastrulation10x/settings.R")
+here::i_am("dimensionality_reduction/precomputed_dimensionality_reduction.R")
+
+source(here::here("settings.R"))
 
 #####################
 ## I/O and options ##
@@ -135,5 +137,4 @@ for (i in unique(to.plot$sample)) {
   print(p)
   dev.off()
 }
-
 
