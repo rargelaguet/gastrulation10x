@@ -78,22 +78,22 @@ mnn.fn <- function(sce.all, sce.query, sce.atlas, genes = NULL, npcs = 50, k = 2
   query_pca <- pca_all[-(1:ncol(sce.atlas)),]
 
   # (Optional) Batch effect correction for the atlas
-  atlas_meta <- colData(sce.atlas)[,c("stage","sample")] %>% as.data.frame
-  stages <- sort(unique(sce.atlas$stage))
-  order_df        <- atlas_meta[!duplicated(atlas_meta$sample), c("stage", "sample")]
-  order_df$ncells <- sapply(order_df$sample, function(x) sum(atlas_meta$sample == x))
-  order_df$stage  <- factor(order_df$stage, levels = stages)
-  order_df       <- order_df[order(order_df$stage, order_df$ncells, decreasing = TRUE),]
-  order_df$stage <- as.character(order_df$stage)
-  set.seed(42)
-  atlas_corrected <- doBatchCorrect(
-    sce.atlas       = sce.atlas,
-    timepoints      = atlas_meta$stage,
-    samples         = atlas_meta$sample,
-    timepoint_order = order_df$stage,
-    sample_order    = order_df$sample,
-    pca             = atlas_pca
-  )
+  # atlas_meta <- colData(sce.atlas)[,c("stage","sample")] %>% as.data.frame
+  # stages <- sort(unique(sce.atlas$stage))
+  # order_df        <- atlas_meta[!duplicated(atlas_meta$sample), c("stage", "sample")]
+  # order_df$ncells <- sapply(order_df$sample, function(x) sum(atlas_meta$sample == x))
+  # order_df$stage  <- factor(order_df$stage, levels = stages)
+  # order_df       <- order_df[order(order_df$stage, order_df$ncells, decreasing = TRUE),]
+  # order_df$stage <- as.character(order_df$stage)
+  # set.seed(42)
+  # atlas_corrected <- doBatchCorrect(
+  #   sce.atlas       = sce.atlas,
+  #   timepoints      = atlas_meta$stage,
+  #   samples         = atlas_meta$sample,
+  #   timepoint_order = order_df$stage,
+  #   sample_order    = order_df$sample,
+  #   pca             = atlas_pca
+  # )
   
   
   # MNN mapping

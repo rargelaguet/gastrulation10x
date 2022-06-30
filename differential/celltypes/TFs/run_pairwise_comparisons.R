@@ -11,8 +11,8 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 } else {
   stop("Computer not recognised")
 }
-io$outdir <- paste0(io$basedir,"/results/differential/TFs"); dir.create(io$outdir, showWarnings = F)
-io$tmpdir <- paste0(io$basedir,"/tmp"); dir.create(io$outdir, showWarnings = F)
+io$outdir <- paste0(io$basedir,"/results/differential/celltypes/TFs"); dir.create(io$outdir, showWarnings = F)
+io$tmpdir <- paste0(io$outdir,"/tmp"); dir.create(io$tmpdir, showWarnings = F)
 
 #############
 ## Options ##
@@ -22,7 +22,7 @@ io$tmpdir <- paste0(io$basedir,"/tmp"); dir.create(io$outdir, showWarnings = F)
 opts$test_mode <- FALSE
 
 # Define cell types
-opts$groups <- opts$celltypes
+opts$groups <- opts$celltypes# %>% head(n=3)
 
 #########
 ## Run ##
@@ -46,7 +46,7 @@ for (i in 1:length(opts$groups)) {
       
       # Run
       print(cmd)
-      # system(cmd)
+      system(cmd)
     }
   }
 }

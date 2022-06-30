@@ -1,7 +1,7 @@
 import anndata as anndata
 import scanpy as sc
 
-def load_adata(adata_file, metadata_file = None, normalise = False, cells = None, features = None, filter_lowly_expressed_genes = False, set_colors = True):
+def load_adata(adata_file, metadata_file = None, normalise = False, cells = None, features = None, filter_lowly_expressed_genes = False, set_colors = True, keep_counts=False):
 
 	adata = sc.read(adata_file)
 
@@ -23,6 +23,9 @@ def load_adata(adata_file, metadata_file = None, normalise = False, cells = None
 	if filter_lowly_expressed_genes:
 		sc.pp.filter_genes(adata, min_counts=10)
 
+	if keep_counts:
+		adata.layers["raw"] = adata.X.copy()
+		
 	if normalise:
 		sc.pp.normalize_total(adata, target_sum=None, exclude_highly_expressed=False)
 		sc.pp.log1p(adata)

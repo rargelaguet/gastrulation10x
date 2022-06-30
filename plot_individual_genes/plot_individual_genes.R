@@ -1,22 +1,57 @@
-suppressPackageStartupMessages(library(SingleCellExperiment))
+here::i_am("plot_individual_genes/plot_individual_genes.R")
+
+source(here::here("settings.R"))
+source(here::here("utils.R"))
 
 #####################
 ## Define settings ##
 #####################
 
-if (grepl("ricard",Sys.info()['nodename'])) {
-  source("/Users/ricard/gastrulation10x/settings.R")
-} else if (grepl("ebi",Sys.info()['nodename'])) {
-  source("/homes/ricard/gastrulation10x/settings.R")
-}
+# I/O
+io$outdir <- file.path(io$basedir,"results/individual_genes")
 
-## I/O ##
+# Options
 
-io$outdir <- paste0(io$basedir,"/results/individual_genes")
+opts$celltypes = c(
+  "Epiblast",
+  "Primitive_Streak",
+  "Caudal_epiblast",
+  "PGC",
+  "Anterior_Primitive_Streak",
+  "Notochord",
+  "Def._endoderm",
+  "Gut",
+  "Nascent_mesoderm",
+  "Mixed_mesoderm",
+  "Intermediate_mesoderm",
+  "Caudal_Mesoderm",
+  "Paraxial_mesoderm",
+  "Somitic_mesoderm",
+  "Pharyngeal_mesoderm",
+  "Cardiomyocytes",
+  "Allantois",
+  "ExE_mesoderm",
+  "Mesenchyme",
+  "Haematoendothelial_progenitors",
+  "Endothelium",
+  "Blood_progenitors_1",
+  "Blood_progenitors_2",
+  "Erythroid1",
+  "Erythroid2",
+  "Erythroid3",
+  "NMP",
+  "Rostral_neurectoderm",
+  "Caudal_neurectoderm",
+  "Neural_crest",
+  "Forebrain_Midbrain_Hindbrain",
+  "Spinal_cord",
+  "Surface_ectoderm",
+  "Visceral_endoderm",
+  "ExE_endoderm",
+  "ExE_ectoderm",
+  "Parietal_endoderm"
+)
 
-## Define options ##
-
-# Define stages to plot
 opts$stages <- c(
   "E6.5",
   "E6.75",
@@ -30,74 +65,38 @@ opts$stages <- c(
   "mixed_gastrulation"
 )
 
-# Define cell types to plot
-opts$celltypes = c(
-	"Epiblast",
-	"Primitive_Streak",
-	"Caudal_epiblast",
-	"PGC",
-	"Anterior_Primitive_Streak",
-	"Notochord",
-	"Def._endoderm",
-	"Gut",
-	"Nascent_mesoderm",
-	"Mixed_mesoderm",
-	"Intermediate_mesoderm",
-	"Caudal_Mesoderm",
-	"Paraxial_mesoderm",
-	"Somitic_mesoderm",
-	"Pharyngeal_mesoderm",
-	"Cardiomyocytes",
-	"Allantois",
-	"ExE_mesoderm",
-	"Mesenchyme",
-	"Haematoendothelial_progenitors",
-	"Endothelium",
-	"Blood_progenitors_1",
-	"Blood_progenitors_2",
-	"Erythroid1",
-	"Erythroid2",
-	"Erythroid3",
-	"NMP",
-	"Rostral_neurectoderm",
-	"Caudal_neurectoderm",
-	"Neural_crest",
-	"Forebrain_Midbrain_Hindbrain",
-	"Spinal_cord",
-	"Surface_ectoderm",
-	"Visceral_endoderm",
-	"ExE_endoderm",
-	"ExE_ectoderm",
-	"Parietal_endoderm"
-)
+##########################
+## Load sample metadata ##
+##########################
 
-# Update sample metadata
-sample_metadata <- sample_metadata %>% 
-  .[stage%in%opts$stages & celltype%in%opts$celltypes] %>%
+sample_metadata <- fread(io$metadata) %>% 
+  .[stripped==F & doublet==F & celltype%in%opts$celltypes & stage%in%opts$stages] %>%
   .[,celltype:=factor(celltype, levels=opts$celltypes)]
 
-table(sample_metadata$stage)
 table(sample_metadata$celltype)
+table(sample_metadata$stage)
 
 ###############
 ## Load data ##
 ###############
 
 # Load SingleCellExperiment object
-sce <- readRDS(io$rna.sce)[,as.character(sample_metadata$cell)]
+sce <- load_SingleCellExperiment(io$sce, cells=sample_metadata$cell, normalise = TRUE)
 
-# Remove genes that are not expressed
-sce <- sce[rowMeans(counts(sce))>0,]
+# Add sample metadata as colData
+colData(sce) <- sample_metadata %>% tibble::column_to_rownames("cell") %>% DataFrame
 
-# Load gene metadata
+########################
+## Load gene metadata ##
+########################
+
 gene_metadata <- fread(io$gene_metadata) %>%
-  .[ens_id%in%rownames(sce)]
+  .[ens_id%in%rownames(sce) & symbol!=""]
 
-################
-## Parse data ##
-################
+##################
+## Rename genes ##
+##################
 
-# Rename genes
 foo <- gene_metadata$symbol
 names(foo) <- gene_metadata$ens_id
 sce <- sce[rownames(sce) %in% names(foo),]
@@ -107,37 +106,76 @@ rownames(sce) <- foo[rownames(sce)]
 ## Plot ##
 ##########
 
-# genes.to.plot <- c("Dnmt3l","Apoe")
-genes.to.plot <- rownames(sce)
+genes.to.plot <- fread(io$marker_genes)$gene %>% unique %>% .[!grepl("Rik$",.)] %>% head(n=10)
+genes.to.plot <- c("Dnmt1","Dnmt3a","Dnmt3b","Tet1","Tet2","Tet3")
+
+genes.to.plot <- genes.to.plot[genes.to.plot%in%rownames(sce)]
 
 for (i in 1:length(genes.to.plot)) {
+  
   gene <- genes.to.plot[i]
+  
   print(sprintf("%s/%s: %s",i,length(genes.to.plot),gene))
   
-  # Create data.table to plot
   to.plot <- data.table(
     cell = colnames(sce),
-    celltype = sample_metadata$celltype,
-    expr = logcounts(sce[gene,])[1,]
+    celltype = sce$celltype,
+    expr = logcounts(sce)[gene,]
   )
-
-  # Plot
+  
   p <- ggplot(to.plot, aes(x=celltype, y=expr, fill=celltype)) +
-    # geom_jitter(size=0.8) +
-    geom_violin(scale = "width") +
-    geom_boxplot(width=0.5, outlier.shape=NA) +
-    scale_fill_manual(values=opts$celltype.colors.1) +
+    # geom_point(shape=21, size=2, data=to.plot[,.(expr=mean(expr)),by="celltype"]) +
+    geom_violin(scale="width", alpha=0.75) +
+    geom_boxplot(width=0.5, outlier.shape=NA, alpha=0.75) +
+    # stat_summary(fun.data = give.n, geom = "text", size=3) +
+    scale_fill_manual(values=opts$celltype.colors) +
+    labs(x="",y=sprintf("%s expression",gene)) +
+    guides(x = guide_axis(angle = 90)) +
     theme_classic() +
-    labs(x="",y="RNA expression") +
     theme(
-      axis.text.x = element_text(colour="black",size=rel(1.4), angle=50, hjust=1),
-      axis.text.y = element_text(colour="black",size=rel(1.0)),
-      legend.position="none"
+      axis.text.x = element_text(colour="black",size=rel(0.75)),
+      axis.text.y = element_text(colour="black",size=rel(0.9)),
+      axis.ticks.x = element_blank(),
+      legend.position = "none"
     )
-    
-  # pdf(sprintf("%s/%s.pdf",io$outdir,i), width=8, height=3.5, useDingbats = F)
-  # ggsave("ggtest.png", width = 3.25, height = 3.25, dpi = 1200)
-  jpeg(sprintf("%s/%s.jpeg",io$outdir,gene), width = 900, height = 400)
+  
+  pdf(sprintf("%s/%s_boxplots_single_cells.pdf",io$outdir,gene), width=8, height=5)
   print(p)
   dev.off()
+    
 }
+
+
+##########
+## TEST ##
+##########
+
+genes.to.plot <- c("Dppa3")
+
+for (i in genes.to.plot) {
+  
+  to.plot <- data.table(
+    cell = colnames(sce),
+    celltype = sce$celltype,
+    stage = sce$stage,
+    expr = logcounts(sce)[i,]
+  ) %>% .[celltype=="PGC"]
+  
+  p <- ggplot(to.plot, aes(x=stage, y=expr, fill=stage)) +
+    # geom_point(shape=21, size=2, data=to.plot[,.(expr=mean(expr)),by="celltype"]) +
+    geom_violin(scale="width", alpha=0.75) +
+    geom_boxplot(width=0.5, outlier.shape=NA, alpha=0.75) +
+    # stat_summary(fun.data = give.n, geom = "text", size=3) +
+    scale_fill_manual(values=opts$stage.colors) +
+    labs(x="",y=sprintf("%s expression",i)) +
+    guides(x = guide_axis(angle = 90)) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_text(colour="black",size=rel(0.75)),
+      axis.text.y = element_text(colour="black",size=rel(0.9)),
+      axis.ticks.x = element_blank(),
+      legend.position = "none"
+    )
+  print(p)
+}
+

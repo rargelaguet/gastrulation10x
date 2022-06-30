@@ -23,13 +23,17 @@ if search("ricard", host):
 elif search("ebi", host):
 	io["basedir"] = "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x"
 	io["gene_metadata"] = "/hps/nobackup2/research/stegle/users/ricard/ensembl/mouse/v87/BioMart/mRNA/Mmusculus_genes_BioMart.87.txt"
+elif search("BI2404M", host):
+	io["basedir"] = "/Users/argelagr/data/pijuansala2019_gastrulation10x"
+	io["gene_metadata"] = "/Users/argelagr/data/ensembl/mouse/v87/BioMart/all_genes/Mmusculus_genes_BioMart.87.txt"
+
 else:
 	print("Computer not recognised"); exit()
 
 io["metadata"] = io["basedir"] + "/sample_metadata.txt.gz"
 
 # doublets and poor quality cells already removed
-io["anndata"] = io["basedir"] + "/processed/AnnData.h5ad"
+io["anndata"] = io["basedir"] + "/processed/anndata.h5ad"
 
 #############
 ## Options ##

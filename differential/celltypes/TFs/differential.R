@@ -33,11 +33,11 @@ p$add_argument('--outfile',   type="character",    help='Output file')
 args <- p$parse_args(commandArgs(TRUE))
 
 ## START TEST
-args$groupA <- c("Mixed_mesoderm")
-args$groupB <- c("ExE_ectoderm")
-args$outfile <- c("/Users/ricard/data/gastrulation10x/results/differential/TFs/foo.tsv.gz")
+# args$groupA <- c("Mixed_mesoderm")
+# args$groupB <- c("ExE_ectoderm")
+# args$outfile <- c("/Users/ricard/data/gastrulation10x/results/differential/TFs/foo.tsv.gz")
 # args$outfile <- c("/hps/nobackup2/research/stegle/users/ricard/gastrulation10x/results/differential/foo.tsv.gz")
-args$test_mode <- FALSE
+# args$test_mode <- FALSE
 ## END TEST
 
 #############

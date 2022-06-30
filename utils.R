@@ -256,6 +256,7 @@ ChunkPoints <- function(dsize, csize) {
 
 ggplot_theme_NoAxes <- function() {
   theme(
+    axis.line = element_blank(),
     axis.title = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank()
@@ -275,3 +276,8 @@ getmode <- function(v, dist) {
   }
 }
 
+give.n <- function(x){
+  return(c(y = mean(x), label = length(x)))
+}
+
+sort.abs <- function(dt, sort.field) dt[order(-abs(dt[[sort.field]]))]

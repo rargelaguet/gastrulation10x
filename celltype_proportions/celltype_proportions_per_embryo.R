@@ -2,17 +2,25 @@
 ## Define settings ##
 #####################
 
-source("/Users/ricard/gastrulation10x/settings.R")
+source("/Users/argelagr/gastrulation10x/settings.R")
 io$outdir <- paste0(io$basedir,"/results/celltype_proportions")
 
-################
-## Parse data ##
-################
+opts$remove_ExE_cells <- TRUE
 
-sample_metadata[,.N,by=c("stage","sample")] %>% setorder(-stage) %>% head
+##########################
+## Load sample metadata ##
+##########################
 
-# Remove some lineages
-# sample_metadata <- sample_metadata[!celltype%in%c("ExE_ectoderm","ExE_endoderm","Parietal_endoderm","Visceral_endoderm")]
+sample_metadata <- fread(io$metadata) %>%
+  .[stripped==F & doublet==F] %>%
+  .[,celltype:=factor(celltype, levels=names(opts$celltype.colors))]
+
+if (opts$remove_ExE_cells) {
+  sample_metadata <- sample_metadata %>%
+    .[!celltype%in%c("Visceral_endoderm","ExE_endoderm","ExE_ectoderm","Parietal_endoderm")]
+}
+
+# sample_metadata[,.N,by=c("stage","sample")] %>% setorder(-stage) %>% head
 
 ##################
 ## Calculations ##
@@ -20,14 +28,11 @@ sample_metadata[,.N,by=c("stage","sample")] %>% setorder(-stage) %>% head
 
 dt <- sample_metadata %>% 
   .[,N:=.N,by="sample"] %>%
-  .[,.(N=.N, celltype_proportion=.N/unique(N)),by=c("sample","stage","celltype")] %>%
+  .[,.(N=.N, celltype_proportion=round(.N/unique(N),2)),by=c("sample","stage","celltype")] %>%
   setorder(sample)
 
-##########
-## Save ##
-##########
-
-# fwrite(dt, paste0(io$outdir,"/celltype_proportions.txt.gz"), sep="\t")
+# Save
+fwrite(dt, file.path(io$outdir,"celltype_proportions_noExE.txt.gz"), sep="\t")
 
 ##########
 ## Plot ##
