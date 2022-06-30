@@ -206,7 +206,6 @@ for (i in celltypes.to.plot) {
   dev.off()
 }
 
-
 ##########
 ## Save ##
 ##########

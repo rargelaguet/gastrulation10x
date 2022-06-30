@@ -28,5 +28,10 @@
 
 # Ignore local folders
 **/local-data
+*.Rproj
 *.Rproj.user
 .Rproj.user
+<<<<<<< HEAD
+=======
+
+>>>>>>> 37cc1b97a7376b8b55c424cdd5c11fa4d0b847f1
