@@ -32,23 +32,13 @@ opts$stages <- c(
   # "mixed_gastrulation"
 )
 
-umap_theme <- function() {
-  theme_classic() +
-    theme(
-      axis.title = element_blank(),
-      axis.text = element_blank(),
-      axis.ticks = element_blank(),
-      axis.line = element_blank(),
-      legend.position="none"
-    )
-}
 
 ###############
 ## Load data ##
 ###############
 
 # Load atlas metadata (which includes precomputed UMAP coordinates)
-meta_atlas <- sample_metadata %>%
+sample_metadata <- sample_metadata %>%
   .[stage%in%opts$stages] %>%
   .[,aggregated_celltype:=stringr::str_replace_all(celltype,opts$aggregated.celltypes)] %>%
   .[,aggregated_celltype:=factor(aggregated_celltype, levels=names(opts$celltype.colors))] %>%
@@ -60,7 +50,7 @@ meta_atlas <- sample_metadata %>%
 ################
 
 # Remove specific lineages
-to.plot <- meta_atlas %>%
+to.plot <- sample_metadata %>%
   # .[!celltype%in%c("ExE_ectoderm", "Parietal_endoderm","Visceral_endoderm","ExE_endoderm","PGC")] %>%
   # .[!celltype%in%c("ExE_ectoderm")] %>%
   .[,aggregated_celltype:=stringr::str_replace_all(aggregated_celltype,"_"," ")]
@@ -83,12 +73,7 @@ p <- ggplot(to.plot, aes(x=umapX, y=umapY)) +
   guides(colour = guide_legend(override.aes = list(size=5))) +
   theme_classic() +
   theme(
-    legend.title = element_blank(),
-    legend.position = "none",
-    axis.text = element_blank(),
-    axis.line = element_blank(),
-    axis.title = element_blank(),
-    axis.ticks = element_blank()
+    legend.position = "none"
   )
 
 pdf(paste0(io$outdir,"/umap_per_celltype.pdf"), width=4.5, height=4.5)
@@ -102,7 +87,7 @@ p <- ggplot(to.plot %>% setorder(stage), aes(x=umapX, y=umapY)) +
   ggrastr::geom_point_rast(aes(colour=stage), size=0.01) +
   scale_color_manual(values=opts$stage.colors) +
   guides(colour = guide_legend(override.aes = list(size=4.5))) +
-  umap_theme() +
+  ggplot_theme_NoAxes() +
   theme(
     legend.title = element_blank(),
     legend.position = "right"
@@ -126,10 +111,6 @@ for (i in unique(to.plot$sample)) {
     scale_fill_manual(values=opts$celltype.colors) +
     theme_classic() +
     theme(
-      axis.title = element_blank(),
-      axis.text = element_blank(),
-      axis.ticks = element_blank(),
-      axis.line = element_blank(),
       legend.position="none"
     )
   
@@ -138,3 +119,28 @@ for (i in unique(to.plot$sample)) {
   dev.off()
 }
 
+
+#######################
+## Plot trajectories ##
+#######################
+
+celltypes.to.highlight <- c("Haematoendothelial_progenitors","Blood_progenitors_1","Blood_progenitors_2","Erythroid1","Erythroid2","Erythroid3")
+  
+to.plot2 <- to.plot %>% copy %>%
+  .[,alpha:=1.0] %>%
+  .[!celltype%in%celltypes.to.highlight,c("celltype","alpha"):=list("None",0.25)]
+
+# Colour by cell type
+p <- ggplot(to.plot, aes(x=umapX, y=umapY)) +
+  # geom_point(aes(colour=aggregated_celltype), size=0.1) +
+  ggrastr::geom_point_rast(aes(colour=aggregated_celltype), size=0.05) +
+  scale_color_manual(values=opts$celltype.colors) +
+  guides(colour = guide_legend(override.aes = list(size=5))) +
+  ggplot_theme_NoAxes() +
+  theme(
+    legend.position = "none"
+  )
+
+pdf(paste0(io$outdir,"/umap_per_celltype.pdf"), width=4.5, height=4.5)
+print(p)
+dev.off()

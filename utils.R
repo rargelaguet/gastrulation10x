@@ -255,7 +255,9 @@ ChunkPoints <- function(dsize, csize) {
 "%ni%" <- Negate("%in%")
 
 ggplot_theme_NoAxes <- function() {
+  theme_classic() +
   theme(
+    axis.line = element_blank(),
     axis.title = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank()
