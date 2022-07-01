@@ -211,24 +211,23 @@ for (i in celltypes.to.plot) {
 ## Plot trajectories ##
 #######################
 
-celltypes.to.highlight <- c("Haematoendothelial_progenitors","Blood_progenitors_1","Blood_progenitors_2","Erythroid1","Erythroid2","Erythroid3")
+celltypes.to.highlight <- c("Haematoendothelial progenitors","Blood progenitors 1","Blood progenitors 2","Erythroid1","Erythroid2","Erythroid3")
   
 to.plot2 <- to.plot %>% copy %>%
   .[,alpha:=1.0] %>%
   .[!celltype%in%celltypes.to.highlight,c("celltype","alpha"):=list("None",0.25)]
 
 # Colour by cell type
-p <- ggplot(to.plot, aes(x=umapX, y=umapY)) +
-  # geom_point(aes(colour=aggregated_celltype), size=0.1) +
-  ggrastr::geom_point_rast(aes(colour=aggregated_celltype), size=0.05) +
-  scale_color_manual(values=opts$celltype.colors) +
-  guides(colour = guide_legend(override.aes = list(size=5))) +
+p <- ggplot(to.plot2, aes(x=umapX, y=umapY)) +
+  ggrastr::geom_point_rast(aes(x=umapX, y=umapY), size=0.25, color="grey", alpha=0.25, data=to.plot2[!celltype%in%celltypes.to.highlight]) +
+  ggrastr::geom_point_rast(aes(x=umapX, y=umapY, fill=celltype), size=0.75, shape=21, alpha=1.0, stroke=0.1, data=to.plot2[celltype%in%celltypes.to.highlight]) +
+  scale_fill_manual(values=opts$celltype.colors[celltypes.to.highlight]) +
   ggplot_theme_NoAxes() +
   theme(
     legend.position = "none"
   )
 
-pdf(paste0(io$outdir,"/umap_per_celltype.pdf"), width=4.5, height=4.5)
+pdf(paste0(io$outdir,"/umap_blood_trajectory.pdf"), width=4.5, height=4.5)
 print(p)
 dev.off()
 
