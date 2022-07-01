@@ -277,3 +277,8 @@ getmode <- function(v, dist) {
   }
 }
 
+give.n <- function(x){
+  return(c(y = mean(x), label = length(x)))
+}
+
+sort.abs <- function(dt, sort.field) dt[order(-abs(dt[[sort.field]]))]

@@ -1,14 +1,55 @@
 here::i_am("dimensionality_reduction/precomputed_dimensionality_reduction.R")
 
 source(here::here("settings.R"))
+source(here::here("utils.R"))
 
 #####################
-## I/O and options ##
+## Define settings ##
 #####################
 
 io$outdir <- paste0(io$basedir,"/results/dimensionality_reduction/pdf")
 
-opts$aggregated.celltypes <- c(
+opts$celltypes <- c(
+  "Epiblast",
+  "Primitive_Streak",
+  "Caudal_epiblast",
+  "PGC",
+  "Anterior_Primitive_Streak",
+  "Notochord",
+  "Def._endoderm",
+  "Gut",
+  "Nascent_mesoderm",
+  "Mixed_mesoderm",
+  "Intermediate_mesoderm",
+  "Caudal_Mesoderm",
+  "Paraxial_mesoderm",
+  "Somitic_mesoderm",
+  "Pharyngeal_mesoderm",
+  "Cardiomyocytes",
+  "Allantois",
+  "ExE_mesoderm",
+  "Mesenchyme",
+  "Haematoendothelial_progenitors",
+  "Endothelium",
+  "Blood_progenitors_1",
+  "Blood_progenitors_2",
+  "Erythroid1",
+  "Erythroid2",
+  "Erythroid3",
+  "NMP",
+  "Rostral_neurectoderm",
+  "Caudal_neurectoderm",
+  "Neural_crest",
+  "Forebrain_Midbrain_Hindbrain",
+  "Spinal_cord",
+  "Surface_ectoderm",
+  "Visceral_endoderm",
+  "ExE_endoderm",
+  "ExE_ectoderm",
+  "Parietal_endoderm"
+)
+
+opts$rename_celltypes <- c(
   "Erythroid1" = "Erythroid",
   "Erythroid2" = "Erythroid",
   "Erythroid3" = "Erythroid",
@@ -32,6 +73,7 @@ opts$stages <- c(
   # "mixed_gastrulation"
 )
 
+opts$subset_cells <- FALSE
 
 ###############
 ## Load data ##
@@ -39,86 +81,131 @@ opts$stages <- c(
 
 # Load atlas metadata (which includes precomputed UMAP coordinates)
 sample_metadata <- sample_metadata %>%
-  .[stage%in%opts$stages] %>%
+  .[stage%in%opts$stages & celltype%in%opts$celltypes] %>%
   .[,aggregated_celltype:=stringr::str_replace_all(celltype,opts$aggregated.celltypes)] %>%
   .[,aggregated_celltype:=factor(aggregated_celltype, levels=names(opts$celltype.colors))] %>%
   .[,stage:=factor(stage, levels=opts$stages)] %>%
   droplevels()
 
+if (opts$subset_cells) sample_metadata <- sample_metadata[sample(.N,7e4)]
+
 ################
 ## Parse data ##
 ################
 
-# Remove specific lineages
 to.plot <- sample_metadata %>%
+  # .[,celltype:=stringr::str_replace_all(celltype,opts$rename_celltypes)] %>%
+  # .[,celltype:=factor(celltype, levels=names(opts$celltype.colors))] %>%
   # .[!celltype%in%c("ExE_ectoderm", "Parietal_endoderm","Visceral_endoderm","ExE_endoderm","PGC")] %>%
   # .[!celltype%in%c("ExE_ectoderm")] %>%
-  .[,aggregated_celltype:=stringr::str_replace_all(aggregated_celltype,"_"," ")]
+  .[,celltype:=stringr::str_replace_all(celltype,"_"," ")]
   
 names(opts$celltype.colors) <- names(opts$celltype.colors) %>% stringr::str_replace_all("_"," ")
-opts$celltype.colors <- opts$celltype.colors[names(opts$celltype.colors) %in% unique(to.plot$aggregated_celltype)]
+opts$celltype.colors <- opts$celltype.colors[names(opts$celltype.colors) %in% unique(to.plot$celltype)]
 
-stopifnot(all(unique(to.plot$aggregated_celltype) %in% names(opts$celltype.colors)))
-# unique(to.plot$aggregated_celltype)[!unique(to.plot$aggregated_celltype) %in% names(opts$celltype.colors)]
+stopifnot(all(unique(to.plot$celltype) %in% names(opts$celltype.colors)))
+# unique(to.plot$celltype)[!unique(to.plot$celltype) %in% names(opts$celltype.colors)]
 
-###################################
-## Plot dimensionality reduction ##
-###################################
+#########################################################
+## Plot dimensionality reduction coloured by cell type ##
+#########################################################
 
-# Colour by cell type
+# to.plot <- to.plot[,.SD[sample.int(1000)],by="celltype"]
+# to.plot.subset <- to.plot[,.SD[sample.int(5e4)]]
+# to.plot.subset <- to.plot
+
 p <- ggplot(to.plot, aes(x=umapX, y=umapY)) +
-  # geom_point(aes(colour=aggregated_celltype), size=0.1) +
-  ggrastr::geom_point_rast(aes(colour=aggregated_celltype), size=0.05) +
+  # geom_point(aes(colour=celltype), size=0.1) +
+  ggrastr::geom_point_rast(size=0.05, aes(colour=celltype), alpha=0.80, raster.dpi=150) +
+  # ggrepel::geom_text_repel(aes_string(label="celltype"), size=4, data=to.plot[,.(umapX=median(umapX), umapY=median(umapY)), by="celltype"]) +
   scale_color_manual(values=opts$celltype.colors) +
-  guides(colour = guide_legend(override.aes = list(size=5))) +
+  guides(colour = guide_legend(nrow=4, byrow=TRUE, override.aes = list(size=3.5))) +
   theme_classic() +
+  ggplot_theme_NoAxes() +
   theme(
     legend.position = "none"
   )
 
-pdf(paste0(io$outdir,"/umap_per_celltype.pdf"), width=4.5, height=4.5)
+pdf(paste0(io$outdir,"/umap_per_celltype.pdf"), width=7, height=6.25)
 print(p)
 dev.off()
 
 
-# Colour by stage
-p <- ggplot(to.plot %>% setorder(stage), aes(x=umapX, y=umapY)) +
+#####################################################
+## Plot dimensionality reduction coloured by stage ##
+#####################################################
+
+p <- ggplot(to.plot %>% setorder(-stage), aes(x=umapX, y=umapY)) +
   # geom_point(aes(colour=stage), size=0.1) +
-  ggrastr::geom_point_rast(aes(colour=stage), size=0.01) +
+  ggrastr::geom_point_rast(aes(colour=stage), size=0.05, alpha=0.80, raster.dpi=150) +
   scale_color_manual(values=opts$stage.colors) +
   guides(colour = guide_legend(override.aes = list(size=4.5))) +
   ggplot_theme_NoAxes() +
   theme(
     legend.title = element_blank(),
-    legend.position = "right"
+    legend.position = "none"
   )
 
-pdf(paste0(io$outdir,"/umap_per_stage.pdf"), width=6.5, height=4.5)
+pdf(paste0(io$outdir,"/umap_per_stage.pdf"), width=7, height=6.1)
 print(p)
 dev.off()
 
-# Plot each sample separately
-for (i in unique(to.plot$sample)) {
+###############################
+## Plot one sample at a time ##
+###############################
+
+# for (i in unique(to.plot$sample)) {
+#   print(i)
+#   
+#   to.plot_i <- to.plot %>% copy %>%
+#     .[,alpha:=1.0] %>%
+#     .[sample!=i,c("celltype","alpha"):=list("None",0.25)]
+#   
+#   p <- ggplot() +
+#     ggrastr::geom_point_rast(aes(x=umapX, y=umapY), size=1.5, color="grey", alpha=0.25, data=to.plot_i[sample!=i]) +
+#     ggrastr::geom_point_rast(aes(x=umapX, y=umapY, fill=celltype), size=2, shape=21, alpha=1.0, data=to.plot_i[sample==i]) +
+#     scale_fill_manual(values=opts$celltype.colors) +
+#     theme_classic() +
+#     ggplot_theme_NoAxes() +
+#     theme(
+#       legend.position="none"
+#     )
+#   
+#   pdf(sprintf("%s/umap_sample%s.pdf",io$outdir,i), width=5, height=5)
+#   print(p)
+#   dev.off()
+# }
+
+
+#################################
+## Plot one celltype at a time ##
+#################################
+
+celltypes.to.plot <- unique(to.plot$celltype)
+
+# i <- c("Haematoendothelial_progenitors", "Blood_progenitors_1", "Blood_progenitors_2", "Erythroid1", "Erythroid2", "Erythroid3")
+# i <- c("Spinal cord", "Somitic mesoderm", "Caudal Mesoderm", "NMP")
+for (i in celltypes.to.plot) {
   print(i)
-  
+
   to.plot_i <- to.plot %>% copy %>%
     .[,alpha:=1.0] %>%
-    .[sample!=i,c("celltype","alpha"):=list("None",0.25)]
-  
+    .[!celltype%in%i,c("celltype","alpha"):=list("None",0.25)]
+
   p <- ggplot() +
-    ggrastr::geom_point_rast(aes(x=umapX, y=umapY), size=1.5, color="grey", alpha=0.25, data=to.plot_i[sample!=i]) +
-    ggrastr::geom_point_rast(aes(x=umapX, y=umapY, fill=aggregated_celltype), size=2, shape=21, alpha=1.0, data=to.plot_i[sample==i]) +
+    ggrastr::geom_point_rast(aes(x=umapX, y=umapY), size=1.5, color="grey", alpha=0.25, data=to.plot_i[!celltype%in%i]) +
+    ggrastr::geom_point_rast(aes(x=umapX, y=umapY, fill=celltype), size=2, shape=21, alpha=1.0, data=to.plot_i[celltype%in%i]) +
     scale_fill_manual(values=opts$celltype.colors) +
     theme_classic() +
+    ggplot_theme_NoAxes() +
     theme(
       legend.position="none"
     )
-  
-  pdf(sprintf("%s/umap_sample%s.pdf",io$outdir,i), width=5, height=5)
+
+  pdf(sprintf("%s/umap_coloured_by_%s.pdf",io$outdir,gsub(" ","-",i)), width=7, height=6)
   print(p)
   dev.off()
 }
-
 
 #######################
 ## Plot trajectories ##
@@ -144,3 +231,13 @@ p <- ggplot(to.plot, aes(x=umapX, y=umapY)) +
 pdf(paste0(io$outdir,"/umap_per_celltype.pdf"), width=4.5, height=4.5)
 print(p)
 dev.off()
+
+##########
+## Save ##
+##########
+
+umap.dt <- sample_metadata %>%
+  .[,c("cell","umapX","umapY","celltype")] %>%
+  setnames(c("umapX","umapY"),c("V1","V2")) %>%
+  .[,c("V1","V2"):=list(round(V1,2),round(V2,2))]
+fwrite(umap.dt, file.path(io$outdir,"umap_coordinates.txt.gz"), sep="\t", quote=F, na="NA")

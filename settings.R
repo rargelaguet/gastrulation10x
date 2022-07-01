@@ -1,7 +1,10 @@
 suppressPackageStartupMessages(library(data.table))
 suppressPackageStartupMessages(library(purrr))
 suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(ggpubr))
 suppressPackageStartupMessages(library(SingleCellExperiment))
+suppressPackageStartupMessages(library(argparse))
+suppressPackageStartupMessages(library(stringr))
 
 #########
 ## I/O ##
@@ -17,17 +20,23 @@ if (grepl("ricard",Sys.info()['nodename'])) {
 } else if (grepl("ebi",Sys.info()['nodename'])) {
   io$basedir <- "/hps/nobackup2/research/stegle/users/ricard/gastrulation10x"
   io$gene_metadata <- "/hps/nobackup2/research/stegle/users/ricard/ensembl/mouse/v87/BioMart/all_genes/Mmusculus_genes_BioMart.87.txt"
+} else if (grepl("BI2404M",Sys.info()['nodename'])) {
+  io$basedir <- "/Users/argelagr/data/gastrulation10x"
+  io$gene_metadata <- "/Users/argelagr/data/ensembl/mouse/v87/BioMart/all_genes/Mmusculus_genes_BioMart.87.txt"
 } else {
   stop("Computer not recognised")
 }
+
 
 io$metadata <- paste0(io$basedir,"/sample_metadata.txt.gz")
 # io$marker_genes.stringent <- paste0(io$basedir,"/results/marker_genes/marker_genes_stringent.tsv.gz")
 io$marker_genes <- paste0(io$basedir,"/results/marker_genes/all_stages/marker_genes.txt.gz")
 io$average_expression_per_celltype <- paste0(io$basedir,"/results/marker_genes/all_stages/avg_expr_per_celltype_and_gene.txt.gz")
 io$sce <- paste0(io$basedir,"/processed/SingleCellExperiment.rds")
+io$sce_pseudobulk_celltype <- paste0(io$basedir,"/results/pseudobulk/SingleCellExperiment_pseudobulk_celltype.rds")
 io$cellassign.dir <- paste0(io$basedir,"/results/cellassign")
-
+io$gene_statistics <- paste0(io$basedir,"/results/gene_statistics/gene_statistics.txt.gz")
+io$pca <- paste0(io$basedir,"/results/dimensionality_reduction/corrected_pcas.rds")
 io$paga.connectivity <- paste0(io$basedir,"/results/paga/paga_connectivity.csv")
 io$paga.coordinates <- paste0(io$basedir,"/results/paga/paga_coordinates.csv")
 
@@ -137,7 +146,7 @@ opts$stage.colors = c(
 # )
 
 
-opts$celltypes = c(
+opts$celltypes <- c(
 	"Epiblast",
 	"Primitive_Streak",
 	"Caudal_epiblast",
@@ -227,7 +236,7 @@ opts$samples <- c(
 ## Load sample metadata ##
 ##########################
 
-sample_metadata <- fread(io$metadata) %>%
-  .[stripped==F & doublet==F] %>%
-  .[,celltype:=factor(celltype, levels=names(opts$celltype.colors))]
+# sample_metadata <- fread(io$metadata) %>%
+#   .[stripped==F & doublet==F] %>%
+#   .[,celltype:=factor(celltype, levels=names(opts$celltype.colors))]
   

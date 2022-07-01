@@ -13,7 +13,8 @@ library(batchelor)
 
 Define I/O
 ```{r define_io, echo=FALSE}
-source("/Users/ricard/gastrulation10x/settings.R")
+source("/Users/argelagr/gastrulation10x/settings.R")
+source("/Users/argelagr/gastrulation10x/utils.R")
 io$outdir <- paste0(io$basedir,"/results/dimensionality_reduction")
 ```
 
@@ -71,16 +72,20 @@ opts$celltypes = c(
    "ExE_ectoderm",
    "Parietal_endoderm"
 )
+opts$celltypes <- c("PGC")
 opts$batch_correction <- FALSE
 ```
 
 Update sample metadata
 ```{r load_metadata, echo=FALSE}
-sample_metadata <- sample_metadata %>%
-  .[stage%in%opts$stages & celltype%in%opts$celltypes] %>%
-  droplevels
-# table(sample_metadata$stage)
-# table(sample_metadata$celltype)
+sample_metadata <- fread(io$metadata) %>%
+  .[doublet==F & stripped==F] %>% 
+  .[stage%in%opts$stages & celltype%in%opts$celltypes]
+```
+
+```{r}
+table(sample_metadata$stage)
+table(sample_metadata$celltype)
 ```
 
 # Load data
