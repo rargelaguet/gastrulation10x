@@ -80,12 +80,13 @@ opts$subset_cells <- FALSE
 ###############
 
 # Load atlas metadata (which includes precomputed UMAP coordinates)
-sample_metadata <- sample_metadata %>%
-  .[stage%in%opts$stages & celltype%in%opts$celltypes] %>%
-  .[,aggregated_celltype:=stringr::str_replace_all(celltype,opts$aggregated.celltypes)] %>%
-  .[,aggregated_celltype:=factor(aggregated_celltype, levels=names(opts$celltype.colors))] %>%
-  .[,stage:=factor(stage, levels=opts$stages)] %>%
-  droplevels()
+sample_metadata <- fread(io$metadata) %>%
+  .[stripped==F & doublet==F] %>%
+  .[stage%in%opts$stages & celltype%in%opts$celltypes] #%>%
+  # .[,aggregated_celltype:=stringr::str_replace_all(celltype,opts$aggregated.celltypes)] %>%
+  # .[,aggregated_celltype:=factor(aggregated_celltype, levels=names(opts$celltype.colors))] %>%
+  # .[,stage:=factor(stage, levels=opts$stages)] %>%
+  # droplevels()
 
 if (opts$subset_cells) sample_metadata <- sample_metadata[sample(.N,7e4)]
 
@@ -211,7 +212,8 @@ for (i in celltypes.to.plot) {
 ## Plot trajectories ##
 #######################
 
-celltypes.to.highlight <- c("Haematoendothelial progenitors","Blood progenitors 1","Blood progenitors 2","Erythroid1","Erythroid2","Erythroid3")
+# celltypes.to.highlight <- c("Haematoendothelial progenitors","Blood progenitors 1","Blood progenitors 2","Erythroid1","Erythroid2","Erythroid3")
+celltypes.to.highlight <- c("ExE ectoderm","ExE endoderm","Parietal endoderm")
   
 to.plot2 <- to.plot %>% copy %>%
   .[,alpha:=1.0] %>%
@@ -227,7 +229,7 @@ p <- ggplot(to.plot2, aes(x=umapX, y=umapY)) +
     legend.position = "none"
   )
 
-pdf(paste0(io$outdir,"/umap_blood_trajectory.pdf"), width=4.5, height=4.5)
+pdf(paste0(io$outdir,"/umap_ExE_cells.pdf"), width=4.5, height=4.5)
 print(p)
 dev.off()
 
