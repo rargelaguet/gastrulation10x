@@ -5,6 +5,7 @@ suppressPackageStartupMessages(library(ggpubr))
 suppressPackageStartupMessages(library(SingleCellExperiment))
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(ggrepel))
 
 #########
 ## I/O ##

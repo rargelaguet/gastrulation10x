@@ -118,7 +118,7 @@ stopifnot(all(unique(to.plot$celltype) %in% names(opts$celltype.colors)))
 p <- ggplot(to.plot, aes(x=umapX, y=umapY)) +
   # geom_point(aes(colour=celltype), size=0.1) +
   ggrastr::geom_point_rast(size=0.05, aes(colour=celltype), alpha=0.80, raster.dpi=150) +
-  # ggrepel::geom_text_repel(aes_string(label="celltype"), size=4, data=to.plot[,.(umapX=median(umapX), umapY=median(umapY)), by="celltype"]) +
+  ggrepel::geom_text_repel(aes_string(label="celltype"), size=4, data=to.plot[,.(umapX=median(umapX), umapY=median(umapY)), by="celltype"]) +
   scale_color_manual(values=opts$celltype.colors) +
   guides(colour = guide_legend(nrow=4, byrow=TRUE, override.aes = list(size=3.5))) +
   theme_classic() +
@@ -184,8 +184,6 @@ dev.off()
 
 celltypes.to.plot <- unique(to.plot$celltype)
 
-# i <- c("Haematoendothelial_progenitors", "Blood_progenitors_1", "Blood_progenitors_2", "Erythroid1", "Erythroid2", "Erythroid3")
-# i <- c("Spinal cord", "Somitic mesoderm", "Caudal Mesoderm", "NMP")
 for (i in celltypes.to.plot) {
   print(i)
 
@@ -194,8 +192,8 @@ for (i in celltypes.to.plot) {
     .[!celltype%in%i,c("celltype","alpha"):=list("None",0.25)]
 
   p <- ggplot() +
-    ggrastr::geom_point_rast(aes(x=umapX, y=umapY), size=1.5, color="grey", alpha=0.25, data=to.plot_i[!celltype%in%i]) +
-    ggrastr::geom_point_rast(aes(x=umapX, y=umapY, fill=celltype), size=2, shape=21, alpha=1.0, data=to.plot_i[celltype%in%i]) +
+    ggrastr::geom_point_rast(aes(x=umapX, y=umapY), size=0.25, color="grey", alpha=0.25, raster.dpi=150, data=to.plot_i[!celltype%in%i][sample.int(.N,5e4)]) +
+    ggrastr::geom_point_rast(aes(x=umapX, y=umapY, fill=celltype), size=0.80, shape=21, alpha=1.0, stroke=0.075, raster.dpi=150, data=to.plot_i[celltype%in%i]) +
     scale_fill_manual(values=opts$celltype.colors) +
     theme_classic() +
     ggplot_theme_NoAxes() +
@@ -203,7 +201,7 @@ for (i in celltypes.to.plot) {
       legend.position="none"
     )
 
-  pdf(sprintf("%s/umap_coloured_by_%s.pdf",io$outdir,gsub(" ","-",i)), width=7, height=6)
+  pdf(sprintf("%s/umap_coloured_by_%s.pdf",io$outdir,gsub(" ","-",i)), width=6, height=6)
   print(p)
   dev.off()
 }
@@ -213,7 +211,9 @@ for (i in celltypes.to.plot) {
 #######################
 
 # celltypes.to.highlight <- c("Haematoendothelial progenitors","Blood progenitors 1","Blood progenitors 2","Erythroid1","Erythroid2","Erythroid3")
-celltypes.to.highlight <- c("ExE ectoderm","ExE endoderm","Parietal endoderm")
+# celltypes.to.highlight <- c("Erythroid1","Erythroid2","Erythroid3")
+celltypes.to.highlight <- c("Blood progenitors 1","Blood progenitors 2")
+# celltypes.to.highlight <- c("ExE ectoderm","ExE endoderm","Parietal endoderm")
   
 to.plot2 <- to.plot %>% copy %>%
   .[,alpha:=1.0] %>%
@@ -221,15 +221,15 @@ to.plot2 <- to.plot %>% copy %>%
 
 # Colour by cell type
 p <- ggplot(to.plot2, aes(x=umapX, y=umapY)) +
-  ggrastr::geom_point_rast(aes(x=umapX, y=umapY), size=0.25, color="grey", alpha=0.25, data=to.plot2[!celltype%in%celltypes.to.highlight]) +
-  ggrastr::geom_point_rast(aes(x=umapX, y=umapY, fill=celltype), size=0.75, shape=21, alpha=1.0, stroke=0.1, data=to.plot2[celltype%in%celltypes.to.highlight]) +
+  ggrastr::geom_point_rast(aes(x=umapX, y=umapY), size=0.25, color="grey", alpha=0.25, raster.dpi=150, data=to.plot2[!celltype%in%celltypes.to.highlight][sample.int(.N,5e4)]) +
+  ggrastr::geom_point_rast(aes(x=umapX, y=umapY, fill=celltype), size=0.80, shape=21, alpha=1.0, stroke=0.1, raster.dpi=150, data=to.plot2[celltype%in%celltypes.to.highlight]) +
   scale_fill_manual(values=opts$celltype.colors[celltypes.to.highlight]) +
   ggplot_theme_NoAxes() +
   theme(
     legend.position = "none"
   )
 
-pdf(paste0(io$outdir,"/umap_ExE_cells.pdf"), width=4.5, height=4.5)
+pdf(paste0(io$outdir,"/umap_coloured_by_blood_progenitors.pdf"), width=6, height=6)
 print(p)
 dev.off()
 
